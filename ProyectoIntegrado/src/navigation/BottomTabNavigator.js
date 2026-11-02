@@ -32,7 +32,7 @@ export default function BottomTabNavigator() {
             {/* Primera opción del menú inferior. */}
 
             <Tab.Screen
-                name="Sala"
+                name="Admin1"
                 component={admin1Screen}
                 options={{
                     tabBarIcon: () => (
@@ -42,7 +42,7 @@ export default function BottomTabNavigator() {
             />
 
             <Tab.Screen
-                name="Cocina"
+                name="Admin2"
                 component={admin2Screen}
                 options={{
                     tabBarIcon: () => (
