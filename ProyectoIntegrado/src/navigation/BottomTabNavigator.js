@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 // Importamos nuestras pantallas.
 import admin1Screen from '../screens/admin1Screen';
 import admin2Screen from '../screens/admin2Screen';
-
+import admin3Screen from '../screens/admin3Screen';
 // Importamos el Stack de eventos.
 
 
@@ -12,6 +12,7 @@ import admin2Screen from '../screens/admin2Screen';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialIcons2 from '@expo/vector-icons/MaterialIcons';
+import MaterialIcons3 from '@expo/vector-icons/MaterialIcons';
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabNavigator() {
@@ -51,6 +52,15 @@ export default function BottomTabNavigator() {
                 }}
             />
 
+             <Tab.Screen
+                name="Admin3"
+                component={admin3Screen}
+                options={{
+                    tabBarIcon: () => (
+                        <MaterialIcons3 name="admin-panel-settings" size={24} color="black" />
+                    )    
+                }}
+            />
 
             {/* 
                 Segunda opción.

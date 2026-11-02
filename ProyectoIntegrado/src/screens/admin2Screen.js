@@ -8,7 +8,7 @@ export default function admin2Screen({ navigation }) {
         <View style={styles.container}>
           <Text style={styles.title}>Arduino Controller</Text>
           
-          <Text style={styles.subtitle}>Controla un Arduino desde tu teléfono</Text>
+          <Text style={styles.subtitle}>Productos en venta</Text>
           
           <View style={styles.infoContainer}>
             <Text style={styles.infoText}>
