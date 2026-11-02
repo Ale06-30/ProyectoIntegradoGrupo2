@@ -32,7 +32,7 @@ export default function BottomTabNavigator() {
             {/* Primera opción del menú inferior. */}
 
             <Tab.Screen
-                name="Admin1"
+                name="admin1"
                 component={admin1Screen}
                 options={{
                     tabBarIcon: () => (
