@@ -12,7 +12,7 @@ import admin3Screen from '../screens/admin3Screen';
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialIcons2 from '@expo/vector-icons/MaterialIcons';
-import MaterialIcons3 from '@expo/vector-icons/MaterialIcons';
+import AntDesign from '@expo/vector-icons/AntDesign';
 const Tab = createBottomTabNavigator();
 
 export default function BottomTabNavigator() {
@@ -57,7 +57,7 @@ export default function BottomTabNavigator() {
                 component={admin3Screen}
                 options={{
                     tabBarIcon: () => (
-                        <MaterialIcons3 name="admin-panel-settings" size={24} color="black" />
+                        <AntDesign name="profile" size={24} color="black" />
                     )    
                 }}
             />
