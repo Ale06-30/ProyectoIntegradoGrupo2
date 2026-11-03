@@ -1,0 +1,15 @@
+{
+  "name": "servidor-arduino",
+  "version": "1.0.0",
+  "description": "Servidor para conectar Arduino con React Native",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.2",
+    "serialport": "^12.0.0",
+    "socket.io": "^4.8.3"
+  }
+}
