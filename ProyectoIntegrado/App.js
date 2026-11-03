@@ -1,10 +1,11 @@
-import { View } from 'react-native';
+
+// Importamos el navegador principal que creamos.
 import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
-  return (
-    <View style={{ flex: 1 }}>
-      <RootNavigator />
-    </View>
-  );
+
+    return (
+        <RootNavigator />
+    );
+
 }
