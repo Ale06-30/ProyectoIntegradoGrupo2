@@ -17,10 +17,10 @@ export default function UserTabNavigator() {
 
         <Tab.Navigator
             screenOptions={{
-                tabBarActiveTintColor: '#e60f0f',
-                tabBarInactiveTintColor: '#111f7a',
+                tabBarActiveTintColor: '#7C3AED',
+                tabBarInactiveTintColor: '#71719A',
                 tabBarStyle: {
-                    backgroundColor: '#c8c8cb'
+                    backgroundColor: '#13131A'
                 },
                 tabBarShowLabel: false
             }}
@@ -30,9 +30,15 @@ export default function UserTabNavigator() {
                 name="Productos"
                 component={ProductosUser}
                 options={{
-                    tabBarIcon: () => (
-                        <MaterialIcons name="shopping-cart" size={24} color="black" />
-                    )
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <MaterialIcons
+                            name="shopping-cart"
+                            size={24}
+                            // Cambia de color automáticamente según esté seleccionado o no
+                            color={focused ? '#FACC15' : '#9CA3AF'}
+                        />
+                    ),
+                    headerShown: false 
                 }}
             />
 
@@ -40,9 +46,10 @@ export default function UserTabNavigator() {
                 name="Seguimiento"
                 component={SeguimientoUser}
                 options={{
-                    tabBarIcon: () => (
-                        <MaterialIcons name="local-shipping" size={24} color="black" />
-                    )
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <MaterialIcons name="local-shipping" size={24} color={focused ? '#FACC15' : '#9CA3AF'} />
+                    ),
+                    headerShown: false
                 }}
             />
 
@@ -50,9 +57,10 @@ export default function UserTabNavigator() {
                 name="Sesion"
                 component={SesionUser}
                 options={{
-                    tabBarIcon: () => (
-                        <MaterialIcons name="logout" size={24} color="black" />
-                    )
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <MaterialIcons name="logout" size={24} color={focused ? '#FACC15' : '#9CA3AF'}/>
+                    ),
+                    headerShown: false
                 }}
             />
 

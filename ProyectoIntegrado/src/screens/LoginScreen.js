@@ -1,4 +1,4 @@
-
+// src/screens/LoginScreen.js
 import { StatusBar } from 'expo-status-bar';
 import {
     View,
@@ -46,7 +46,13 @@ export default function LoginScreen({ navigation }) {
             .then(() => {
                 setModalAdmin(false);
                 setClaveAdmin('');
-                navigation.navigate('Home');
+                
+
+                if (tipoUsuario === 'administrador') {
+                    navigation.navigate('admin'); 
+                } else {
+                    navigation.navigate('user'); 
+                }
             })
             .catch((error) => {
                 Alert.alert(
@@ -107,21 +113,21 @@ export default function LoginScreen({ navigation }) {
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
             >
-                <StatusBar style="dark" />
+                <StatusBar style="light" />
 
                 <View style={styles.header}>
                     <View style={styles.houseIcon}>
                         <Ionicons
-                            name="home-outline"
+                            name="cube-outline"
                             size={42}
-                            color="#53624E"
+                            color="#38BDF8"
                         />
                     </View>
 
-                    <Text style={styles.title}>Mi Casa</Text>
+                    <Text style={styles.title}>RoboArm</Text>
 
                     <Text style={styles.subtitle}>
-                        Bienvenido de nuevo
+                        Control y Mystery Boxes
                     </Text>
                 </View>
 
@@ -162,7 +168,7 @@ export default function LoginScreen({ navigation }) {
                                 color={
                                     tipoUsuario === 'usuario'
                                         ? '#FFFFFF'
-                                        : '#53624E'
+                                        : '#94A3B8'
                                 }
                             />
 
@@ -193,7 +199,7 @@ export default function LoginScreen({ navigation }) {
                                 color={
                                     tipoUsuario === 'administrador'
                                         ? '#FFFFFF'
-                                        : '#53624E'
+                                        : '#94A3B8'
                                 }
                             />
 
@@ -217,18 +223,18 @@ export default function LoginScreen({ navigation }) {
                         <Ionicons
                             name="mail-outline"
                             size={21}
-                            color="#687363"
+                            color="#94A3B8"
                         />
 
                         <TextInput
                             placeholder="Ingresa tu correo"
+                            placeholderTextColor="#71717A"
                             value={email}
                             onChangeText={setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             autoCorrect={false}
                             style={styles.input}
-                            placeholderTextColor="#999"
                         />
                     </View>
 
@@ -240,17 +246,17 @@ export default function LoginScreen({ navigation }) {
                         <Ionicons
                             name="lock-closed-outline"
                             size={21}
-                            color="#687363"
+                            color="#94A3B8"
                         />
 
                         <TextInput
                             placeholder="Ingresa tu contraseña"
+                            placeholderTextColor="#71717A"
                             secureTextEntry={!mostrarPassword}
                             value={password}
                             onChangeText={setPassword}
                             autoCapitalize="none"
                             style={styles.input}
-                            placeholderTextColor="#999"
                         />
 
                         <TouchableOpacity
@@ -265,7 +271,7 @@ export default function LoginScreen({ navigation }) {
                                         : 'eye-outline'
                                 }
                                 size={22}
-                                color="#687363"
+                                color="#94A3B8"
                             />
                         </TouchableOpacity>
                     </View>
@@ -330,17 +336,17 @@ export default function LoginScreen({ navigation }) {
                             <Ionicons
                                 name="lock-closed-outline"
                                 size={21}
-                                color="#687363"
+                                color="#94A3B8"
                             />
 
                             <TextInput
                                 placeholder="Clave de administrador"
+                                placeholderTextColor="#71717A"
                                 value={claveAdmin}
                                 onChangeText={setClaveAdmin}
                                 secureTextEntry={!mostrarClaveAdmin}
                                 autoCapitalize="none"
                                 style={styles.input}
-                                placeholderTextColor="#999"
                                 onSubmitEditing={confirmarAdmin}
                                 returnKeyType="done"
                             />
@@ -359,7 +365,7 @@ export default function LoginScreen({ navigation }) {
                                             : 'eye-outline'
                                     }
                                     size={22}
-                                    color="#687363"
+                                    color="#94A3B8"
                                 />
                             </TouchableOpacity>
                         </View>
@@ -400,234 +406,225 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
     mainContainer: {
         flex: 1,
-        backgroundColor: '#F2F0EA',
+        backgroundColor: '#121214',
     },
-
     scrollContainer: {
         flexGrow: 1,
         alignItems: 'center',
         paddingBottom: 30,
     },
-
     header: {
         width: '100%',
         height: 260,
-        backgroundColor: '#D8DED2',
+        backgroundColor: '#18181B',
         alignItems: 'center',
         justifyContent: 'center',
         borderBottomLeftRadius: 35,
         borderBottomRightRadius: 35,
         paddingTop: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#27272A',
     },
-
     houseIcon: {
         width: 70,
         height: 70,
-        backgroundColor: '#F2F0EA',
+        backgroundColor: '#27272A',
         borderRadius: 35,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#3F3F46',
     },
-
     title: {
         fontSize: 30,
-        fontWeight: 'bold',
-        color: '#394739',
+        fontWeight: '700',
+        color: '#F4F4F5',
+        letterSpacing: 0.5,
     },
-
     subtitle: {
-        fontSize: 15,
-        color: '#667064',
+        fontSize: 13,
+        color: '#A1A1AA',
         marginTop: 5,
+        fontWeight: '500',
+        letterSpacing: 0.2,
     },
-
     card: {
         width: '88%',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#18181B',
         borderRadius: 20,
         padding: 25,
         marginTop: -30,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#27272A',
         elevation: 4,
     },
-
     accountIcon: {
         width: 60,
         height: 60,
-        backgroundColor: '#71816A',
+        backgroundColor: '#27272A',
         borderRadius: 30,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#3F3F46',
     },
-
     cardTitle: {
         fontSize: 25,
-        fontWeight: 'bold',
-        color: '#394739',
+        fontWeight: '700',
+        color: '#F4F4F5',
         marginBottom: 5,
     },
-
     cardSubtitle: {
         fontSize: 14,
-        color: '#777',
+        color: '#A1A1AA',
         textAlign: 'center',
         marginBottom: 25,
     },
-
     label: {
         width: '90%',
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#394739',
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#A1A1AA',
         marginBottom: 7,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
-
     optionsContainer: {
         width: '90%',
         flexDirection: 'row',
         gap: 8,
         marginBottom: 20,
     },
-
     optionButton: {
         flex: 1,
         minHeight: 52,
         paddingHorizontal: 8,
-        backgroundColor: '#F7F7F3',
+        backgroundColor: '#27272A',
         borderWidth: 1,
-        borderColor: '#D5D9D0',
+        borderColor: '#3F3F46',
         borderRadius: 10,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 6,
     },
-
     optionSelected: {
-        backgroundColor: '#4A5D4A',
-        borderColor: '#4A5D4A',
+        backgroundColor: '#0284C7',
+        borderColor: '#38BDF8',
     },
-
     optionText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#53624E',
+        color: '#A1A1AA',
     },
-
     optionTextSelected: {
         color: '#FFFFFF',
     },
-
     inputContainer: {
         width: '90%',
         height: 50,
-        backgroundColor: '#F7F7F3',
+        backgroundColor: '#27272A',
         borderWidth: 1,
-        borderColor: '#D5D9D0',
+        borderColor: '#3F3F46',
         borderRadius: 10,
         paddingHorizontal: 12,
         marginBottom: 18,
         flexDirection: 'row',
         alignItems: 'center',
     },
-
     input: {
         flex: 1,
         fontSize: 16,
-        color: '#333',
+        color: '#F4F4F5',
         paddingHorizontal: 10,
     },
-
     loginButton: {
         width: '90%',
         height: 50,
-        backgroundColor: '#4A5D4A',
+        backgroundColor: '#0284C7',
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection: 'row',
         marginTop: 5,
         marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#38BDF8',
     },
-
     loginButtonText: {
         color: '#FFFFFF',
-        fontSize: 17,
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '700',
         marginLeft: 8,
+        letterSpacing: 0.3,
     },
-
     button: {
         flexDirection: 'row',
         marginTop: 5,
     },
-
     linkText: {
-        color: '#777',
+        color: '#A1A1AA',
         fontSize: 14,
     },
-
     linkTextBold: {
-        color: '#4A5D4A',
+        color: '#38BDF8',
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '700',
         marginLeft: 5,
     },
-
     modalBackground: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
     },
-
     modalCard: {
         width: '100%',
         maxWidth: 400,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#18181B',
         borderRadius: 20,
         padding: 25,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#27272A',
         elevation: 8,
     },
-
     modalIcon: {
         width: 65,
         height: 65,
-        backgroundColor: '#71816A',
+        backgroundColor: '#27272A',
         borderRadius: 33,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#3F3F46',
     },
-
     modalTitle: {
         fontSize: 22,
-        fontWeight: 'bold',
-        color: '#394739',
+        fontWeight: '700',
+        color: '#F4F4F5',
         textAlign: 'center',
         marginBottom: 8,
     },
-
     modalSubtitle: {
         fontSize: 14,
-        color: '#777',
+        color: '#A1A1AA',
         textAlign: 'center',
         marginBottom: 22,
     },
-
     cancelButton: {
         width: '90%',
         paddingVertical: 10,
         alignItems: 'center',
     },
-
     cancelText: {
         fontSize: 15,
         fontWeight: 'bold',
-        color: '#9A5A55',
+        color: '#EF4444',
     },
 });

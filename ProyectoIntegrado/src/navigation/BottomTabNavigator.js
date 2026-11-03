@@ -11,7 +11,7 @@ import admin3Screen from '../screens/admin3Screen';
 //Importamos los iconos
 
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import MaterialIcons2 from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 const Tab = createBottomTabNavigator();
 
@@ -21,10 +21,10 @@ export default function BottomTabNavigator() {
 
         <Tab.Navigator
              screenOptions={{
-                tabBarActiveTintColor: '#e60f0f',
-                tabBarInactiveTintColor: '#111f7a',
+                tabBarActiveTintColor: '#0284C7',
+                tabBarInactiveTintColor: '#71717A',
                 tabBarStyle: {
-                    backgroundColor: '#c8c8cb'
+                    backgroundColor: '#18181B'
                 },
                 tabBarShowLabel: false
             }}
@@ -36,9 +36,10 @@ export default function BottomTabNavigator() {
                 name="admin1"
                 component={admin1Screen}
                 options={{
-                    tabBarIcon: () => (
-                        <MaterialIcons name="admin-panel-settings" size={24} color="black" />
-                    )    
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <MaterialCommunityIcons name="robot-industrial" size={24} color={focused ? '#38BDF8' : '#71717A'} />
+                    ),
+                    headerShown: false    
                 }}
             />
 
@@ -46,9 +47,10 @@ export default function BottomTabNavigator() {
                 name="Admin2"
                 component={admin2Screen}
                 options={{
-                    tabBarIcon: () => (
-                        <MaterialIcons2 name="admin-panel-settings" size={24} color="black" />
-                    )    
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <AntDesign name="stock" size={24} color={focused ? '#38BDF8' : '#71717A'} />
+                    ),
+                    headerShown: false    
                 }}
             />
 
@@ -56,9 +58,10 @@ export default function BottomTabNavigator() {
                 name="Admin3"
                 component={admin3Screen}
                 options={{
-                    tabBarIcon: () => (
-                        <AntDesign name="profile" size={24} color="black" />
-                    )    
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <MaterialIcons name="logout" size={24} color={focused ? '#38BDF8' : '#71717A'} />
+                    ),
+                    headerShown: false    
                 }}
             />
 

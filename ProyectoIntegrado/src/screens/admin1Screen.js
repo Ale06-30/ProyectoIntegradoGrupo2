@@ -1,47 +1,106 @@
 // src/screens/HomeScreen.js
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 
 export default function admin1Screen({ navigation }) {
+  const manejarControl = (comando) => {
+    console.log(`Ejecutando comando: ${comando}`);
+  };
+
   return (
     <SafeAreaView style={styles.areaSegura}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.container}>
-          <Text style={styles.title}>Arduino Controller</Text>
           
-          <Text style={styles.subtitle}>Controlar Garra</Text>
-          
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>
-              Esta aplicación permite controlar y monitorear un Arduino UNO R3 de forma remota.
-            </Text>
+          {/* Cabecera minimalista */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>RoboArm</Text>
+            <Text style={styles.subtitle}>Control de Garra y Articulaciones</Text>
           </View>
 
-          <View style={styles.cardContainer}>
-            <TouchableOpacity 
-              style={[styles.card, styles.cardBlue]}
-              onPress={() => navigation.navigate('ControlLED')}
-            >
-              <Text style={styles.cardTitle}>Control LED</Text>
-              <Text style={styles.cardDescription}>Enciende o apaga el LED</Text>
-            </TouchableOpacity>
+          {/* PANEL PRINCIPAL DE CONTROL */}
+          <View style={styles.panelControl}>
+            <Text style={styles.sectionTitle}>Panel Operativo</Text>
 
-            <TouchableOpacity 
-              style={[styles.card, styles.cardGreen]}
-              onPress={() => navigation.navigate('SensorHumedad')}
-            >
-              <Text style={[styles.cardTitle, { marginHorizontal: -12}]}>Sensor de Humedad</Text>
-              <Text style={styles.cardDescription}>Monitorea la humedad del suelo</Text>
-            </TouchableOpacity>
+            {/* 1. Base (2 botones: Izquierda / Derecha) */}
+            <View style={styles.controlGroup}>
+              <Text style={styles.groupLabel}>Base Rotatoria</Text>
+              <View style={styles.rowButtons}>
+                <TouchableOpacity 
+                  style={[styles.btnControl, styles.btnBase]}
+                  onPress={() => manejarControl('BASE_IZQ')}
+                >
+                  <Text style={styles.btnText}>◀ Base Izq</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.btnControl, styles.btnBase]}
+                  onPress={() => manejarControl('BASE_DER')}
+                >
+                  <Text style={styles.btnText}>Base Der ▶</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 2. Servos Izquierdos y Derechos (4 botones) */}
+            <View style={styles.controlGroup}>
+              <Text style={styles.groupLabel}>Ejes Articulares</Text>
+              
+              {/* Servos Lado Izquierdo */}
+              <View style={styles.rowButtons}>
+                <TouchableOpacity 
+                  style={styles.btnControl}
+                  onPress={() => manejarControl('SERVO_IZQ_ARRIBA')}
+                >
+                  <Text style={styles.btnText}>Servo Izq ▲</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.btnControl}
+                  onPress={() => manejarControl('SERVO_IZQ_ABAJO')}
+                >
+                  <Text style={styles.btnText}>Servo Izq ▼</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Servos Lado Derecho */}
+              <View style={styles.rowButtons}>
+                <TouchableOpacity 
+                  style={styles.btnControl}
+                  onPress={() => manejarControl('SERVO_DER_ARRIBA')}
+                >
+                  <Text style={styles.btnText}>Servo Der ▲</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.btnControl}
+                  onPress={() => manejarControl('SERVO_DER_ABAJO')}
+                >
+                  <Text style={styles.btnText}>Servo Der ▼</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 3. Garra (2 botones: Abrir / Cerrar con acento naranja y rojo) */}
+            <View style={styles.controlGroup}>
+              <Text style={styles.groupLabel}>Efector Final (Garra)</Text>
+              <View style={styles.rowButtons}>
+                <TouchableOpacity 
+                  style={[styles.btnControl, styles.btnGarraAbrir]}
+                  onPress={() => manejarControl('GARRA_ABRIR')}
+                >
+                  <Text style={styles.btnTextGarra}>Abrir Garra</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.btnControl, styles.btnGarraCerrar]}
+                  onPress={() => manejarControl('GARRA_CERRAR')}
+                >
+                  <Text style={styles.btnTextGarra}>Cerrar Garra</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.infoBox}>
-            <Text style={styles.infoBoxTitle}>Instrucciones</Text>
-            <Text style={styles.infoBoxText}>
-              1. Conecta tu Arduino al puerto USB{'\n'}
-              2. Asegúrate de que el servidor esté corriendo{'\n'}
-              3. Conecta la app al mismo servidor{'\n'}
-            </Text>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -51,98 +110,95 @@ export default function admin1Screen({ navigation }) {
 const styles = StyleSheet.create({
   areaSegura: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#121214', // Gris ultra oscuro, elegante y sobrio
   },
   scrollContainer: {
     flexGrow: 1,
-    padding: 20,
+    padding: 24,
   },
   container: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  headerContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F4F4F5',
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 20,
+    fontSize: 13,
+    color: '#71717A',
+    marginTop: 4,
+    letterSpacing: 0.2,
   },
-  infoContainer: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1565C0',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  cardContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: 'white',
-    borderRadius: 12,
+  panelControl: {
+    backgroundColor: '#18181B', // Gris oscuro para tarjetas
+    borderRadius: 16,
     padding: 20,
-    marginHorizontal: 5,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#27272A',
   },
-  cardBlue: {
-    backgroundColor: '#e3f2fd',
-  },
-  cardGreen: {
-    backgroundColor: '#e8f5e9',
-  },
-  cardEmoji: {
-    fontSize: 36,
-    marginBottom: 10,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  infoBox: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  infoBoxTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  infoBoxText: {
+  sectionTitle: {
     fontSize: 14,
-    color: '#666',
-    lineHeight: 24,
+    fontWeight: '600',
+    color: '#A1A1AA',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  controlGroup: {
+    marginBottom: 16,
+  },
+  groupLabel: {
+    fontSize: 11,
+    color: '#71717A',
+    marginBottom: 8,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  rowButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  btnControl: {
+    flex: 1,
+    backgroundColor: '#27272A', // Gris medio para botones estándar
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#3F3F46',
+  },
+  btnBase: {
+    backgroundColor: '#27272A',
+    borderColor: '#52525B',
+  },
+  btnGarraAbrir: {
+    backgroundColor: '#C2410C', // Naranja industrial intenso
+    borderColor: '#EA580C',
+  },
+  btnGarraCerrar: {
+    backgroundColor: '#991B1B', // Rojo oscuro de alerta
+    borderColor: '#B91C1C',
+  },
+  btnText: {
+    color: '#E4E4E7',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  btnTextGarra: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

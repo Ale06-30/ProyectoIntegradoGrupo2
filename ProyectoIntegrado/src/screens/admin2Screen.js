@@ -1,47 +1,74 @@
 // src/screens/HomeScreen.js
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image } from 'react-native';
 
 export default function admin2Screen({ navigation }) {
+  // Valores fijos de stock que podrás conectar o modificar más adelante
+  const stockAmazon = 12;
+  const stockMercadoLibre = 5;
+
   return (
     <SafeAreaView style={styles.areaSegura}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.container}>
-          <Text style={styles.title}>Arduino Controller</Text>
           
-          <Text style={styles.subtitle}>Productos en venta</Text>
-          
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>
-              Esta aplicación permite controlar y monitorear un Arduino UNO R3 de forma remota.
-            </Text>
+          {/* Cabecera minimalista */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>RoboArm</Text>
+            <Text style={styles.subtitle}>Control de Stock e Inventario</Text>
           </View>
 
-          <View style={styles.cardContainer}>
-            <TouchableOpacity 
-              style={[styles.card, styles.cardBlue]}
-              onPress={() => navigation.navigate('ControlLED')}
-            >
-              <Text style={styles.cardTitle}>Control LED</Text>
-              <Text style={styles.cardDescription}>Enciende o apaga el LED</Text>
-            </TouchableOpacity>
+          {/* LISTA DE PRODUCTOS Y STOCK */}
+          <View style={styles.panelControl}>
+            <Text style={styles.sectionTitle}>Existencias Actuales</Text>
 
-            <TouchableOpacity 
-              style={[styles.card, styles.cardGreen]}
-              onPress={() => navigation.navigate('SensorHumedad')}
-            >
-              <Text style={[styles.cardTitle, { marginHorizontal: -12}]}>Sensor de Humedad</Text>
-              <Text style={styles.cardDescription}>Monitorea la humedad del suelo</Text>
-            </TouchableOpacity>
+            {/* Producto 1 */}
+            <View style={styles.productCard}>
+              <View style={styles.imagePlaceholder}>
+                <Image 
+                  source={{ uri: 'https://via.placeholder.com/300' }} 
+                  style={styles.productImage}
+                  resizeMode="cover"
+                />
+              </View>
+
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>Amazon Mystery Box Tech</Text>
+                
+                {/* Contador de Stock */}
+                <View style={styles.stockContainer}>
+                  <Text style={styles.stockLabel}>Stock Disponible:</Text>
+                  <View style={styles.stockBadge}>
+                    <Text style={styles.stockText}>{stockAmazon} unidades</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Producto 2 */}
+            <View style={styles.productCard}>
+              <View style={styles.imagePlaceholder}>
+                <Image 
+                  source={{ uri: 'https://via.placeholder.com/300' }} 
+                  style={styles.productImage}
+                  resizeMode="cover"
+                />
+              </View>
+
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>Mercado Libre Mega Box</Text>
+                
+                {/* Contador de Stock */}
+                <View style={styles.stockContainer}>
+                  <Text style={styles.stockLabel}>Stock Disponible:</Text>
+                  <View style={styles.stockBadge}>
+                    <Text style={styles.stockText}>{stockMercadoLibre} unidades</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
           </View>
 
-          <View style={styles.infoBox}>
-            <Text style={styles.infoBoxTitle}>Instrucciones</Text>
-            <Text style={styles.infoBoxText}>
-              1. Conecta tu Arduino al puerto USB{'\n'}
-              2. Asegúrate de que el servidor esté corriendo{'\n'}
-              3. Conecta la app al mismo servidor{'\n'}
-            </Text>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -51,98 +78,103 @@ export default function admin2Screen({ navigation }) {
 const styles = StyleSheet.create({
   areaSegura: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#121214',
   },
   scrollContainer: {
     flexGrow: 1,
-    padding: 20,
+    padding: 24,
   },
   container: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  headerContainer: {
+    marginBottom: 20,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F4F4F5',
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 20,
+    fontSize: 13,
+    color: '#71717A',
+    marginTop: 4,
+    letterSpacing: 0.2,
   },
-  infoContainer: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1565C0',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  cardContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: 'white',
-    borderRadius: 12,
+  panelControl: {
+    backgroundColor: '#18181B',
+    borderRadius: 16,
     padding: 20,
-    marginHorizontal: 5,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#27272A',
   },
-  cardBlue: {
-    backgroundColor: '#e3f2fd',
-  },
-  cardGreen: {
-    backgroundColor: '#e8f5e9',
-  },
-  cardEmoji: {
-    fontSize: 36,
-    marginBottom: 10,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  infoBox: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  infoBoxTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
-  },
-  infoBoxText: {
+  sectionTitle: {
     fontSize: 14,
-    color: '#666',
-    lineHeight: 24,
+    fontWeight: '600',
+    color: '#A1A1AA',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  productCard: {
+    backgroundColor: '#27272A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#3F3F46',
+  },
+  imagePlaceholder: {
+    height: 120,
+    width: '100%',
+    backgroundColor: '#18181B',
+    borderRadius: 8,
+    marginBottom: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#3F3F46',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+  },
+  productInfo: {
+    marginBottom: 4,
+  },
+  productName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F4F4F5',
+    marginBottom: 10,
+  },
+  stockContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#18181B',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  stockLabel: {
+    fontSize: 12,
+    color: '#A1A1AA',
+    fontWeight: '500',
+  },
+  stockBadge: {
+    backgroundColor: '#27272A',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  stockText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#F4F4F5',
   },
 });

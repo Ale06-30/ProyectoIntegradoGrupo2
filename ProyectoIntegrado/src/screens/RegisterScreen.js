@@ -1,3 +1,4 @@
+// src/screens/RegisterScreen.js
 import { StatusBar } from 'expo-status-bar';
 import {
     View,
@@ -43,41 +44,41 @@ export default function RegisterScreen({ navigation }) {
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
             >
-                <StatusBar style="dark" />
+                <StatusBar style="light" />
 
                 <View style={styles.header}>
                     <View style={styles.houseIcon}>
                         <Ionicons
-                            name="home-outline"
+                            name="person-add-outline"
                             size={42}
-                            color="#53624E"
+                            color="#60A5FA"
                         />
                     </View>
 
                     <Text style={styles.title}>
-                        Mi Casa
+                        RoboArm
                     </Text>
 
                     <Text style={styles.subtitle}>
-                        Crea tu cuenta
+                        Crea tu nueva cuenta
                     </Text>
                 </View>
 
                 <View style={styles.card}>
                     <View style={styles.accountIcon}>
                         <Ionicons
-                            name="person-add-outline"
+                            name="cube-outline"
                             size={30}
                             color="#FFFFFF"
                         />
                     </View>
 
                     <Text style={styles.cardTitle}>
-                        Crear una cuenta
+                        Registro
                     </Text>
 
                     <Text style={styles.cardSubtitle}>
-                        Regístrate para continuar
+                        Ingresa tus datos para comenzar
                     </Text>
 
                     <Text style={styles.label}>
@@ -88,17 +89,17 @@ export default function RegisterScreen({ navigation }) {
                         <Ionicons
                             name="mail-outline"
                             size={21}
-                            color="#687363"
+                            color="#94A3B8"
                         />
 
                         <TextInput
                             placeholder="Ingresa tu correo"
+                            placeholderTextColor="#71717A"
                             value={email}
                             onChangeText={setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             style={styles.input}
-                            placeholderTextColor="#999"
                         />
                     </View>
 
@@ -110,16 +111,16 @@ export default function RegisterScreen({ navigation }) {
                         <Ionicons
                             name="lock-closed-outline"
                             size={21}
-                            color="#687363"
+                            color="#94A3B8"
                         />
 
                         <TextInput
                             placeholder="Ingresa tu contraseña"
+                            placeholderTextColor="#71717A"
                             secureTextEntry={!mostrarPassword}
                             value={password}
                             onChangeText={setPassword}
                             style={styles.input}
-                            placeholderTextColor="#999"
                         />
 
                         <TouchableOpacity
@@ -134,7 +135,7 @@ export default function RegisterScreen({ navigation }) {
                                         : "eye-outline"
                                 }
                                 size={22}
-                                color="#687363"
+                                color="#94A3B8"
                             />
                         </TouchableOpacity>
                     </View>
@@ -175,7 +176,7 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
     mainContainer: {
         flex: 1,
-        backgroundColor: '#F2F0EA',
+        backgroundColor: '#121214',
     },
 
     scrollContainer: {
@@ -186,84 +187,97 @@ const styles = StyleSheet.create({
 
     header: {
         width: '100%',
-        height: 250,
-        backgroundColor: '#D8DED2',
+        height: 260,
+        backgroundColor: '#18181B',
         alignItems: 'center',
         justifyContent: 'center',
         borderBottomLeftRadius: 35,
         borderBottomRightRadius: 35,
+        borderBottomWidth: 1,
+        borderBottomColor: '#27272A',
     },
 
     houseIcon: {
         width: 70,
         height: 70,
-        backgroundColor: '#F2F0EA',
+        backgroundColor: '#27272A',
         borderRadius: 35,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#3F3F46',
     },
 
     title: {
         fontSize: 30,
-        fontWeight: 'bold',
-        color: '#394739',
+        fontWeight: '700',
+        color: '#F4F4F5',
+        letterSpacing: 0.5,
     },
 
     subtitle: {
-        fontSize: 15,
-        color: '#667064',
+        fontSize: 13,
+        color: '#93C5FD', // Azul opaco/suave distintivo para el registro
         marginTop: 5,
+        fontWeight: '500',
+        letterSpacing: 0.2,
     },
 
     card: {
         width: '88%',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#18181B',
         borderRadius: 20,
         padding: 25,
         marginTop: -30,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#27272A',
         elevation: 4,
     },
 
     accountIcon: {
         width: 60,
         height: 60,
-        backgroundColor: '#71816A',
+        backgroundColor: '#27272A',
         borderRadius: 30,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#3F3F46',
     },
 
     cardTitle: {
         fontSize: 25,
-        fontWeight: 'bold',
-        color: '#394739',
+        fontWeight: '700',
+        color: '#F4F4F5',
         marginBottom: 5,
     },
 
     cardSubtitle: {
         fontSize: 14,
-        color: '#777',
+        color: '#A1A1AA',
         textAlign: 'center',
         marginBottom: 25,
     },
 
     label: {
         width: '90%',
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#394739',
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#A1A1AA',
         marginBottom: 7,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
 
     inputContainer: {
         width: '90%',
         height: 50,
-        backgroundColor: '#F7F7F3',
+        backgroundColor: '#27272A',
         borderWidth: 1,
-        borderColor: '#D5D9D0',
+        borderColor: '#3F3F46',
         borderRadius: 10,
         paddingHorizontal: 12,
         marginBottom: 18,
@@ -274,27 +288,30 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: 16,
-        color: '#333',
+        color: '#F4F4F5',
         paddingHorizontal: 10,
     },
 
     registerButton: {
         width: '90%',
         height: 50,
-        backgroundColor: '#4A5D4A',
+        backgroundColor: '#0369A1', // Azul acero/opaco elegante para diferenciarlo del login
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection: 'row',
         marginTop: 5,
         marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#0284C7',
     },
 
     registerButtonText: {
         color: '#FFFFFF',
-        fontSize: 17,
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '700',
         marginLeft: 8,
+        letterSpacing: 0.3,
     },
 
     button: {
@@ -303,14 +320,14 @@ const styles = StyleSheet.create({
     },
 
     linkText: {
-        color: '#777',
+        color: '#A1A1AA',
         fontSize: 14,
     },
 
     linkTextBold: {
-        color: '#4A5D4A',
+        color: '#60A5FA', // Azul más claro para el enlace de regreso al login
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '700',
         marginLeft: 5,
     },
 });
