@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function UserScreen3() {
+export default function SesionUser() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Este es el cierre de sesión</Text>

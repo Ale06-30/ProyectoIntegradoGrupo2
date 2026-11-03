@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function UserScreen2() {
+export default function SeguimientoUser() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Esta es la pagina para el seguimiento de mi producto</Text>
