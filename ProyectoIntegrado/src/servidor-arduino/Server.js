@@ -5,12 +5,39 @@ const { Server } = require('socket.io');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const cors = require('cors');
+const db = require('./config-sql/db');
 
 // 2. CREAR SERVIDOR
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 app.use(cors());
+// CONSULTAR PRODUCTOS ACTIVOS
+app.get('/api/productos', async (req, res) => {
+    try {
+        const [productos] = await db.query(`
+            SELECT 
+                id,
+                nombre,
+                descripcion,
+                precio,
+                stock,
+                categoria
+            FROM productos
+            WHERE estado = TRUE
+            ORDER BY fecha_registro DESC
+        `);
+
+        res.json(productos);
+
+    } catch (error) {
+        console.log('[ERROR] Al consultar productos:', error.message);
+
+        res.status(500).json({
+            mensaje: 'Error al consultar los productos'
+        });
+    }
+});
 
 // 3. CONFIGURAR PUERTO SERIAL
 // CAMBIAR! Usa COM3, COM4, etc.

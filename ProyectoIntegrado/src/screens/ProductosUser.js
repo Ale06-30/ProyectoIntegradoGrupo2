@@ -1,191 +1,396 @@
-// src/screens/ProductosUser.js
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
+
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    SafeAreaView,
+    ScrollView,
+    TouchableOpacity,
+    ActivityIndicator
+} from 'react-native';
+
+//agregar su propia IP en esta parte
+const URL_API = 'http://192.168.1.17:3000/api/productos';
 
 export default function ProductosUser({ navigation }) {
-  const manejarDetalles = (producto) => {
-    console.log(`Viendo detalles de: ${producto}`);
-  };
 
-  return (
-    <SafeAreaView style={styles.areaSegura}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.container}>
-          
-          {/* Cabecera temática de misterio */}
-          <View style={styles.headerContainer}>
-            <Text style={styles.title}>Mystery Box</Text>
-            <Text style={styles.subtitle}>✨ Descubre lo inesperado</Text>
-          </View>
+    const [productos, setProductos] = useState([]);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState(false);
 
-          {/* LISTA DE PRODUCTOS */}
-          <View style={styles.panelControl}>
-            <Text style={styles.sectionTitle}>Cajas Disponibles</Text>
+    // CONSULTAR PRODUCTOS DESDE MYSQL
+    const cargarProductos = async () => {
+        try {
+            setCargando(true);
+            setError(false);
 
-            {/* Producto 1 */}
-            <View style={styles.productCard}>
-              <View style={styles.imagePlaceholder}>
-                <Image 
-                  source={{ uri: 'https://via.placeholder.com/300' }} 
-                  style={styles.productImage}
-                  resizeMode="cover"
-                />
-              </View>
+            const respuesta = await fetch(URL_API);
 
-              <View style={styles.productInfo}>
-                <View style={styles.rowHeader}>
-                  <Text style={styles.productName}>Amazon Mystery Box Tech</Text>
-                  <Text style={styles.productPrice}>$45.00</Text>
+            if (!respuesta.ok) {
+                throw new Error('Error al consultar productos');
+            }
+
+            const datos = await respuesta.json();
+
+            setProductos(datos);
+
+        } catch (error) {
+            console.log('[ERROR] Al cargar productos:', error.message);
+            setError(true);
+
+        } finally {
+            setCargando(false);
+        }
+    };
+
+    useEffect(() => {
+        cargarProductos();
+    }, []);
+
+    const manejarDetalles = (producto) => {
+        console.log('Viendo detalles de:', producto.nombre);
+        // Aquí conectaremos la pantalla de detalles.
+    };
+
+    return (
+        <SafeAreaView style={styles.areaSegura}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContainer}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.container}>
+
+                    {/* ENCABEZADO */}
+                    <View style={styles.headerContainer}>
+                        <Text style={styles.title}>Mystery Box</Text>
+
+                        <Text style={styles.subtitle}>
+                            Descubre lo inesperado
+                        </Text>
+
+                        <View style={styles.decoracion} />
+                    </View>
+
+                    {/* TITULO DEL CATALOGO */}
+                    <View style={styles.catalogoHeader}>
+                        <View>
+                            <Text style={styles.sectionTitle}>
+                                Nuestras Mystery Box
+                            </Text>
+
+                            <Text style={styles.sectionSubtitle}>
+                                Encuentra tu próxima sorpresa
+                            </Text>
+                        </View>
+
+                        <View style={styles.productCount}>
+                            <Text style={styles.countText}>
+                                {productos.length} productos
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* CATALOGO DE PRODUCTOS */}
+                    <View style={styles.productsContainer}>
+
+                        {cargando ? (
+                            <View style={styles.mensajeContainer}>
+                                <ActivityIndicator
+                                    size="large"
+                                    color="#A78BFA"
+                                />
+                                <Text style={styles.mensajeTexto}>
+                                    Cargando productos...
+                                </Text>
+                            </View>
+
+                        ) : error ? (
+                            <View style={styles.mensajeContainer}>
+                                <Text style={styles.mensajeTexto}>
+                                    No se pudieron cargar los productos.
+                                </Text>
+
+                                <TouchableOpacity
+                                    style={styles.btnDetalles}
+                                    onPress={cargarProductos}
+                                >
+                                    <Text style={styles.btnText}>
+                                        Intentar nuevamente
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                        ) : productos.length === 0 ? (
+                            <View style={styles.mensajeContainer}>
+                                <Text style={styles.mensajeTexto}>
+                                    Todavía no hay productos disponibles.
+                                </Text>
+                            </View>
+
+                        ) : (
+                            productos.map((producto) => (
+                                <View
+                                    key={producto.id}
+                                    style={styles.productCard}
+                                >
+
+                                    {/* ESPACIO PARA LA IMAGEN */}
+                                    <View style={styles.imageContainer}>
+                                        <Text style={styles.boxEmoji}>
+                                            📦
+                                        </Text>
+
+                                        <Text style={styles.imageText}>
+                                            MYSTERY BOX
+                                        </Text>
+                                    </View>
+
+                                    {/* INFORMACION */}
+                                    <View style={styles.productInfo}>
+                                        <Text style={styles.productName}>
+                                            {producto.nombre}
+                                        </Text>
+
+                                        <Text style={styles.productDesc}>
+                                            {producto.descripcion}
+                                        </Text>
+
+                                        <Text style={styles.productPrice}>
+                                            Q{Number(producto.precio).toFixed(2)}
+                                        </Text>
+                                    </View>
+
+                                    {/* BOTON */}
+                                    <TouchableOpacity
+                                        style={styles.btnDetalles}
+                                        onPress={() => manejarDetalles(producto)}
+                                    >
+                                        <Text style={styles.btnText}>
+                                            Ver detalles
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                </View>
+                            ))
+                        )}
+
+                    </View>
+
+                    {/* PIE DE PAGINA */}
+                    <View style={styles.footer}>
+                        <Text style={styles.footerText}>
+                            MYSTERY BOX
+                        </Text>
+
+                        <Text style={styles.footerSubtitle}>
+                            Cada caja es una nueva sorpresa.
+                        </Text>
+                    </View>
+
                 </View>
-                <Text style={styles.productDesc}>Caja sorpresa con dispositivos electrónicos y accesorios de marcas aliadas.</Text>
-              </View>
-
-              <TouchableOpacity 
-                style={styles.btnDetalles}
-                onPress={() => manejarDetalles('Amazon Mystery Box')}
-              >
-                <Text style={styles.btnText}>Ver Detalles</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Producto 2 */}
-            <View style={styles.productCard}>
-              <View style={styles.imagePlaceholder}>
-                <Image 
-                  source={{ uri: 'https://via.placeholder.com/300' }} 
-                  style={styles.productImage}
-                  resizeMode="cover"
-                />
-              </View>
-
-              <View style={styles.productInfo}>
-                <View style={styles.rowHeader}>
-                  <Text style={styles.productName}>Mercado Libre Mega Box</Text>
-                  <Text style={styles.productPrice}>$38.50</Text>
-                </View>
-                <Text style={styles.productDesc}>Lote sorpresa con artículos de inventario seleccionado y novedades.</Text>
-              </View>
-
-              <TouchableOpacity 
-                style={styles.btnDetalles}
-                onPress={() => manejarDetalles('Mercado Libre Mega Box')}
-              >
-                <Text style={styles.btnText}>Ver Detalles</Text>
-              </TouchableOpacity>
-            </View>
-
-          </View>
-
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+            </ScrollView>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  areaSegura: {
-    flex: 1,
-    backgroundColor: '#0B0B0F', // Fondo oscuro profundo y misterioso
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 24,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  headerContainer: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#F4F4F6',
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#A78BFA', // Tono violeta claro/neón sutil que da temática de misterio y sorpresa
-    marginTop: 4,
-    letterSpacing: 0.5,
-    fontWeight: '600',
-  },
-  panelControl: {
-    backgroundColor: '#13131A', // Contenedor oscuro principal con un matiz violeta sutil
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#232331',
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#71719A',
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-  },
-  productCard: {
-    backgroundColor: '#1A1A24', // Tarjetas en un tono gris-violeta oscuro elegante
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#2D2D42',
-  },
-  imagePlaceholder: {
-    height: 120,
-    width: '100%',
-    backgroundColor: '#121218',
-    borderRadius: 8,
-    marginBottom: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#2D2D42',
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
-  productInfo: {
-    marginBottom: 12,
-  },
-  rowHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  productName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#F4F4F6',
-    flex: 1,
-    marginRight: 8,
-  },
-  productPrice: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FACC15', // Amarillo oro brillante de alto impacto para resaltar el valor con estilo sorpresa
-  },
-  productDesc: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    lineHeight: 18,
-  },
-  btnDetalles: {
-    backgroundColor: '#7C3AED', // Violeta eléctrico/profundo que emana misterio y llama a la acción
-    paddingVertical: 11,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#8B5CF6',
-  },
-  btnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
+
+    areaSegura: {
+        flex: 1,
+        backgroundColor: '#0B0B0F',
+    },
+
+    scrollContainer: {
+        flexGrow: 1,
+        paddingHorizontal: 18,
+        paddingBottom: 25,
+    },
+
+    container: {
+        flex: 1,
+    },
+
+    // ENCABEZADO
+    headerContainer: {
+        alignItems: 'center',
+        paddingTop: 35,
+        paddingBottom: 30,
+    },
+
+    title: {
+        fontSize: 32,
+        fontWeight: '900',
+        color: '#F4F4F6',
+        letterSpacing: 1.5,
+    },
+
+    subtitle: {
+        fontSize: 14,
+        color: '#A78BFA',
+        marginTop: 7,
+        fontWeight: '600',
+        letterSpacing: 1,
+    },
+
+    decoracion: {
+        width: 55,
+        height: 3,
+        backgroundColor: '#7C3AED',
+        borderRadius: 5,
+        marginTop: 16,
+    },
+
+    // TITULO DEL CATALOGO
+    catalogoHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+
+    sectionTitle: {
+        fontSize: 19,
+        fontWeight: '800',
+        color: '#F4F4F6',
+    },
+
+    sectionSubtitle: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        marginTop: 5,
+    },
+
+    productCount: {
+        backgroundColor: '#21172F',
+        borderRadius: 20,
+        paddingHorizontal: 11,
+        paddingVertical: 7,
+    },
+
+    countText: {
+        color: '#C4A2FF',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+
+    // PRODUCTOS
+    productsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+
+    productCard: {
+        width: '48.5%',
+        backgroundColor: '#171720',
+        borderRadius: 15,
+        padding: 11,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#2D2D42',
+    },
+
+    imageContainer: {
+        height: 125,
+        backgroundColor: '#21172F',
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#392653',
+    },
+
+    boxEmoji: {
+        fontSize: 43,
+        marginBottom: 7,
+    },
+
+    imageText: {
+        color: '#A78BFA',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 1.5,
+    },
+
+    // INFORMACION
+    productInfo: {
+        flex: 1,
+        marginBottom: 12,
+    },
+
+    productName: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#F4F4F6',
+        marginBottom: 7,
+        minHeight: 35,
+    },
+
+    productDesc: {
+        fontSize: 11,
+        color: '#9CA3AF',
+        lineHeight: 16,
+        minHeight: 65,
+    },
+
+    productPrice: {
+        fontSize: 17,
+        fontWeight: '900',
+        color: '#FACC15',
+        marginTop: 10,
+    },
+
+    // BOTON
+    btnDetalles: {
+        backgroundColor: '#7C3AED',
+        paddingVertical: 11,
+        borderRadius: 9,
+        alignItems: 'center',
+        marginTop: 5,
+    },
+
+    btnText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '800',
+    },
+
+    // MENSAJES
+    mensajeContainer: {
+        width: '100%',
+        alignItems: 'center',
+        paddingVertical: 35,
+    },
+
+    mensajeTexto: {
+        color: '#A78BFA',
+        fontSize: 13,
+        textAlign: 'center',
+        marginTop: 12,
+    },
+
+    // PIE DE PAGINA
+    footer: {
+        alignItems: 'center',
+        marginTop: 20,
+        paddingVertical: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#292936',
+    },
+
+    footerText: {
+        color: '#A78BFA',
+        fontSize: 12,
+        fontWeight: '900',
+        letterSpacing: 2,
+    },
+
+    footerSubtitle: {
+        color: '#77717F',
+        fontSize: 11,
+        marginTop: 6,
+    },
+
 });
