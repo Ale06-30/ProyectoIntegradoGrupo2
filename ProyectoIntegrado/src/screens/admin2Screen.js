@@ -1,352 +1,536 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator
+    View,
+    Text,
+    StyleSheet,
+    SafeAreaView,
+    ScrollView,
+    TouchableOpacity,
+    TextInput,
+    ActivityIndicator,
+    Alert
 } from 'react-native';
 
 const API_URL = 'http://192.168.1.17:3000/api/productos';
 
 export default function admin2Screen({ navigation }) {
 
-  const [productos, setProductos] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(false);
+    const [productos, setProductos] = useState([]);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState(false);
+    const [guardando, setGuardando] = useState(false);
 
-  // CONSULTAR PRODUCTOS DESDE MYSQL
-  const obtenerProductos = async () => {
-    try {
-      setCargando(true);
-      setError(false);
+    // Datos del formulario
+    const [nombre, setNombre] = useState('');
+    const [descripcion, setDescripcion] = useState('');
+    const [precio, setPrecio] = useState('');
+    const [stock, setStock] = useState('');
+    const [categoria, setCategoria] = useState('');
 
-      const respuesta = await fetch(API_URL);
+    // Obtener productos de MySQL
+    const obtenerProductos = async () => {
+        try {
+            setCargando(true);
+            setError(false);
 
-      if (!respuesta.ok) {
-        throw new Error('No se pudieron obtener los productos');
-      }
+            const respuesta = await fetch(API_URL);
 
-      const datos = await respuesta.json();
+            if (!respuesta.ok) {
+                throw new Error('No se pudieron obtener los productos.');
+            }
 
-      setProductos(datos);
+            const datos = await respuesta.json();
+            setProductos(datos);
 
-    } catch (err) {
-      console.log('[ERROR] Al obtener productos:', err.message);
-      setError(true);
-    } finally {
-      setCargando(false);
-    }
-  };
+        } catch (err) {
+            console.log('Error al obtener productos:', err);
+            setError(true);
+        } finally {
+            setCargando(false);
+        }
+    };
 
-  useEffect(() => {
-    obtenerProductos();
-  }, []);
+    useEffect(() => {
+        obtenerProductos();
+    }, []);
 
-  // FORMATO DEL PRECIO
-  const formatearPrecio = (precio) => {
-    return `$${Number(precio).toFixed(2)}`;
-  };
+    // Registrar producto en MySQL
+    const registrarProducto = async () => {
 
-  return (
-    <SafeAreaView style={styles.container}>
+        if (
+            nombre.trim() === '' ||
+            precio.trim() === '' ||
+            stock.trim() === ''
+        ) {
+            Alert.alert(
+                'Campos incompletos',
+                'Ingresa el nombre, precio y stock del producto.'
+            );
+            return;
+        }
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+        const precioNumero = Number(precio);
+        const stockNumero = Number(stock);
 
-        {/* ENCABEZADO */}
-        <View style={styles.header}>
-          <Text style={styles.headerIcon}>📦</Text>
+        if (!Number.isFinite(precioNumero) || precioNumero <= 0) {
+            Alert.alert('Precio inválido', 'Ingresa un precio mayor que cero.');
+            return;
+        }
 
-          <Text style={styles.headerTitle}>
-            Mystery Box
-          </Text>
+        if (!Number.isInteger(stockNumero) || stockNumero < 0) {
+            Alert.alert('Stock inválido', 'Ingresa una cantidad entera igual o mayor que cero.');
+            return;
+        }
 
-          <Text style={styles.headerSubtitle}>
-            Control de Stock e Inventario
-          </Text>
-        </View>
+        try {
+            setGuardando(true);
 
-        {/* TITULO */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.sectionTitle}>
-            Inventario de productos
-          </Text>
+            const respuesta = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    nombre: nombre.trim(),
+                    descripcion: descripcion.trim(),
+                    precio: precioNumero,
+                    stock: stockNumero,
+                    categoria: categoria.trim()
+                })
+            });
 
-          <Text style={styles.sectionSubtitle}>
-            Productos registrados en la tienda
-          </Text>
-        </View>
+            const resultado = await respuesta.json();
 
-        {/* BOTON ACTUALIZAR */}
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={obtenerProductos}
-          disabled={cargando}
-        >
-          <Text style={styles.refreshButtonText}>
-            ↻ Actualizar inventario
-          </Text>
-        </TouchableOpacity>
+            if (!respuesta.ok) {
+                throw new Error(
+                    resultado.mensaje || 'No se pudo registrar el producto.'
+                );
+            }
 
-        {/* CARGANDO */}
-        {cargando ? (
+            // Limpiar formulario
+            setNombre('');
+            setDescripcion('');
+            setPrecio('');
+            setStock('');
+            setCategoria('');
 
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#A78BFA" />
+            // Actualizar inventario
+            await obtenerProductos();
 
-            <Text style={styles.messageText}>
-              Cargando productos...
-            </Text>
-          </View>
+            Alert.alert(
+                'Producto registrado',
+                'El producto se guardó correctamente.'
+            );
 
-        ) : error ? (
+        } catch (err) {
+            console.log('Error al registrar producto:', err);
 
-          /* ERROR DE CONEXION */
-          <View style={styles.centerContainer}>
-            <Text style={styles.messageText}>
-              No se pudieron cargar los productos.
-            </Text>
+            Alert.alert(
+                'Error',
+                err.message || 'No se pudo conectar con el servidor.'
+            );
+        } finally {
+            setGuardando(false);
+        }
+    };
 
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={obtenerProductos}
+    return (
+        <SafeAreaView style={styles.container}>
+
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
             >
-              <Text style={styles.retryButtonText}>
-                Intentar nuevamente
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-        ) : productos.length === 0 ? (
+                {/* ENCABEZADO */}
+                <View style={styles.header}>
+                    <Text style={styles.headerIcon}>📦</Text>
 
-          /* INVENTARIO VACIO */
-          <View style={styles.centerContainer}>
-            <Text style={styles.emptyIcon}>📦</Text>
-
-            <Text style={styles.messageText}>
-              No hay productos registrados.
-            </Text>
-          </View>
-
-        ) : (
-
-          /* LISTA DE PRODUCTOS */
-          <View style={styles.productsContainer}>
-
-            {productos.map((producto) => (
-
-              <View
-                key={producto.id}
-                style={styles.productCard}
-              >
-
-                <View style={styles.productImage}>
-                  <Text style={styles.productEmoji}>
-                    📦
-                  </Text>
-                </View>
-
-                <View style={styles.productInfo}>
-
-                  <Text style={styles.productName}>
-                    {producto.nombre}
-                  </Text>
-
-                  <Text style={styles.productPrice}>
-                    {formatearPrecio(producto.precio)}
-                  </Text>
-
-                  <View style={styles.stockContainer}>
-                    <Text style={styles.stockLabel}>
-                      Stock disponible:
+                    <Text style={styles.headerTitle}>
+                        RoboArm
                     </Text>
 
-                    <Text style={styles.stockValue}>
-                      {producto.stock} unidades
+                    <Text style={styles.headerSubtitle}>
+                        Control de Stock e Inventario
                     </Text>
-                  </View>
+                </View>
+
+                {/* FORMULARIO */}
+                <View style={styles.formCard}>
+
+                    <Text style={styles.sectionTitle}>
+                        Registrar nuevo producto
+                    </Text>
+
+                    <Text style={styles.label}>Nombre del producto</Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. Mystery Box Premium"
+                        placeholderTextColor="#71717A"
+                        value={nombre}
+                        onChangeText={setNombre}
+                    />
+
+                    <Text style={styles.label}>Descripción</Text>
+
+                    <TextInput
+                        style={[styles.input, styles.descriptionInput]}
+                        placeholder="Describe el producto..."
+                        placeholderTextColor="#71717A"
+                        value={descripcion}
+                        onChangeText={setDescripcion}
+                        multiline
+                    />
+
+                    <Text style={styles.label}>Precio</Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. 55.00"
+                        placeholderTextColor="#71717A"
+                        value={precio}
+                        onChangeText={setPrecio}
+                        keyboardType="decimal-pad"
+                    />
+
+                    <Text style={styles.label}>Stock disponible</Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. 10"
+                        placeholderTextColor="#71717A"
+                        value={stock}
+                        onChangeText={setStock}
+                        keyboardType="number-pad"
+                    />
+
+                    <Text style={styles.label}>Categoría</Text>
+
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Ej. Mystery Box"
+                        placeholderTextColor="#71717A"
+                        value={categoria}
+                        onChangeText={setCategoria}
+                    />
+
+                    <TouchableOpacity
+                        style={[
+                            styles.registerButton,
+                            guardando && styles.disabledButton
+                        ]}
+                        onPress={registrarProducto}
+                        disabled={guardando}
+                    >
+                        {guardando ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <Text style={styles.registerButtonText}>
+                                + Registrar producto
+                            </Text>
+                        )}
+                    </TouchableOpacity>
 
                 </View>
 
-              </View>
+                {/* INVENTARIO */}
+                <View style={styles.inventoryHeader}>
+                    <Text style={styles.sectionTitle}>
+                        Inventario de productos
+                    </Text>
 
-            ))}
+                    <TouchableOpacity
+                        style={styles.refreshButton}
+                        onPress={obtenerProductos}
+                    >
+                        <Text style={styles.refreshText}>
+                            ↻ Actualizar
+                        </Text>
+                    </TouchableOpacity>
+                </View>
 
-          </View>
+                {cargando ? (
 
-        )}
+                    <ActivityIndicator
+                        size="large"
+                        color="#A78BFA"
+                        style={styles.loader}
+                    />
 
-      </ScrollView>
+                ) : error ? (
 
-    </SafeAreaView>
-  );
+                    <View style={styles.emptyCard}>
+                        <Text style={styles.emptyText}>
+                            No se pudieron cargar los productos.
+                        </Text>
+
+                        <TouchableOpacity
+                            style={styles.retryButton}
+                            onPress={obtenerProductos}
+                        >
+                            <Text style={styles.retryText}>
+                                Intentar nuevamente
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                ) : productos.length === 0 ? (
+
+                    <View style={styles.emptyCard}>
+                        <Text style={styles.emptyIcon}>📦</Text>
+
+                        <Text style={styles.emptyText}>
+                            Todavía no hay productos registrados.
+                        </Text>
+                    </View>
+
+                ) : (
+
+                    productos.map((producto) => (
+
+                        <View
+                            key={producto.id}
+                            style={styles.productCard}
+                        >
+                            <View style={styles.productIcon}>
+                                <Text style={styles.packageEmoji}>
+                                    📦
+                                </Text>
+                            </View>
+
+                            <View style={styles.productInfo}>
+
+                                <Text style={styles.productName}>
+                                    {producto.nombre}
+                                </Text>
+
+                                <Text style={styles.productDescription}>
+                                    {producto.categoria || 'Sin categoría'}
+                                </Text>
+
+                                <Text style={styles.productPrice}>
+                                    Q{Number(producto.precio).toFixed(2)}
+                                </Text>
+
+                                <Text style={styles.productStock}>
+                                    Stock: {producto.stock} unidades
+                                </Text>
+
+                            </View>
+                        </View>
+
+                    ))
+
+                )}
+
+            </ScrollView>
+
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
 
-  container: {
-    flex: 1,
-    backgroundColor: '#0B0B0F',
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#0B0B0F'
+    },
 
-  scrollContent: {
-    paddingBottom: 30,
-  },
+    scrollContent: {
+        paddingBottom: 35
+    },
 
-  header: {
-    backgroundColor: '#18181B',
-    paddingTop: 45,
-    paddingBottom: 35,
-    alignItems: 'center',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
+    header: {
+        height: 220,
+        backgroundColor: '#18181B',
+        borderBottomLeftRadius: 35,
+        borderBottomRightRadius: 35,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 25
+    },
 
-  headerIcon: {
-    fontSize: 55,
-    marginBottom: 10,
-  },
+    headerIcon: {
+        fontSize: 55,
+        marginBottom: 10
+    },
 
-  headerTitle: {
-    fontSize: 29,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
+    headerTitle: {
+        color: '#FFFFFF',
+        fontSize: 30,
+        fontWeight: 'bold'
+    },
 
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#A78BFA',
-    marginTop: 5,
-  },
+    headerSubtitle: {
+        color: '#A78BFA',
+        fontSize: 14,
+        marginTop: 5
+    },
 
-  titleContainer: {
-    paddingHorizontal: 20,
-    marginTop: 25,
-    marginBottom: 15,
-  },
+    formCard: {
+        backgroundColor: '#18181B',
+        marginHorizontal: 18,
+        padding: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#27272A',
+        marginBottom: 28
+    },
 
-  sectionTitle: {
-    fontSize: 21,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
+    sectionTitle: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 20
+    },
 
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#A1A1AA',
-    marginTop: 5,
-  },
+    label: {
+        color: '#D4D4D8',
+        fontSize: 14,
+        marginBottom: 8,
+        fontWeight: '600'
+    },
 
-  refreshButton: {
-    backgroundColor: '#7C3AED',
-    marginHorizontal: 20,
-    padding: 13,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
+    input: {
+        backgroundColor: '#27272A',
+        borderRadius: 10,
+        padding: 13,
+        color: '#FFFFFF',
+        fontSize: 14,
+        marginBottom: 17
+    },
 
-  refreshButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
+    descriptionInput: {
+        height: 85,
+        textAlignVertical: 'top'
+    },
 
-  productsContainer: {
-    paddingHorizontal: 15,
-  },
+    registerButton: {
+        backgroundColor: '#7C3AED',
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: 5
+    },
 
-  productCard: {
-    backgroundColor: '#18181B',
-    borderRadius: 18,
-    padding: 15,
-    marginBottom: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#27272A',
-  },
+    disabledButton: {
+        opacity: 0.6
+    },
 
-  productImage: {
-    width: 95,
-    height: 105,
-    backgroundColor: '#27272A',
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-  },
+    registerButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 15
+    },
 
-  productEmoji: {
-    fontSize: 43,
-  },
+    inventoryHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginHorizontal: 18,
+        marginBottom: 15
+    },
 
-  productInfo: {
-    flex: 1,
-  },
+    refreshButton: {
+        backgroundColor: '#27272A',
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        borderRadius: 10
+    },
 
-  productName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
+    refreshText: {
+        color: '#A78BFA',
+        fontWeight: 'bold'
+    },
 
-  productPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FACC15',
-    marginBottom: 10,
-  },
+    loader: {
+        marginTop: 30
+    },
 
-  stockContainer: {
-    backgroundColor: '#27272A',
-    padding: 9,
-    borderRadius: 9,
-  },
+    emptyCard: {
+        backgroundColor: '#18181B',
+        marginHorizontal: 18,
+        padding: 25,
+        borderRadius: 18,
+        alignItems: 'center'
+    },
 
-  stockLabel: {
-    fontSize: 11,
-    color: '#A1A1AA',
-  },
+    emptyIcon: {
+        fontSize: 40,
+        marginBottom: 10
+    },
 
-  stockValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#A78BFA',
-    marginTop: 3,
-  },
+    emptyText: {
+        color: '#A1A1AA',
+        textAlign: 'center'
+    },
 
-  centerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 35,
-  },
+    retryButton: {
+        backgroundColor: '#7C3AED',
+        padding: 12,
+        borderRadius: 10,
+        marginTop: 15
+    },
 
-  messageText: {
-    color: '#A1A1AA',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 15,
-  },
+    retryText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold'
+    },
 
-  emptyIcon: {
-    fontSize: 45,
-  },
+    productCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#18181B',
+        marginHorizontal: 18,
+        marginBottom: 13,
+        padding: 17,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: '#27272A'
+    },
 
-  retryButton: {
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginTop: 15,
-  },
+    productIcon: {
+        width: 65,
+        height: 65,
+        borderRadius: 15,
+        backgroundColor: '#27272A',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 15
+    },
 
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
+    packageEmoji: {
+        fontSize: 35
+    },
+
+    productInfo: {
+        flex: 1
+    },
+
+    productName: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 4
+    },
+
+    productDescription: {
+        color: '#A1A1AA',
+        fontSize: 12,
+        marginBottom: 7
+    },
+
+    productPrice: {
+        color: '#FACC15',
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
+
+    productStock: {
+        color: '#A78BFA',
+        fontSize: 13,
+        marginTop: 5
+    }
 
 });
