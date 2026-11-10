@@ -16,7 +16,82 @@ const io = new Server(server, { cors: { origin: '*' } });
 app.use(cors());
 app.use(express.json());
 
-// 3. CONSULTAR PRODUCTOS ACTIVOS
+// 3. CONSULTAR TODOS LOS PRODUCTOS PARA ADMINISTRACION
+app.get('/api/admin/productos', async (req, res) => {
+    try {
+        const [productos] = await db.query(`
+            SELECT
+                id,
+                nombre,
+                descripcion,
+                precio,
+                stock,
+                categoria,
+                estado
+            FROM productos
+            ORDER BY fecha_registro DESC
+        `);
+
+        res.json(productos);
+
+    } catch (error) {
+        console.log('[ERROR] Al consultar inventario:', error.message);
+
+        res.status(500).json({
+            mensaje: 'Error al consultar el inventario'
+        });
+    }
+});
+
+// 4. HABILITAR O DESHABILITAR PRODUCTO
+app.patch('/api/productos/:id/estado', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { estado } = req.body;
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                mensaje: 'ID de producto no válido'
+            });
+        }
+
+        if (typeof estado !== 'boolean') {
+            return res.status(400).json({
+                mensaje: 'El estado debe ser verdadero o falso'
+            });
+        }
+
+        const [resultado] = await db.query(
+            `UPDATE productos SET estado = ? WHERE id = ?`,
+            [estado, id]
+        );
+
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({
+                mensaje: 'No se encontró el producto'
+            });
+        }
+
+        console.log(
+            `[OK] Producto ${id}: ${estado ? 'Habilitado' : 'Deshabilitado'}`
+        );
+
+        res.json({
+            mensaje: estado
+                ? 'Producto habilitado correctamente'
+                : 'Producto deshabilitado correctamente'
+        });
+
+    } catch (error) {
+        console.log('[ERROR] Al cambiar estado:', error.message);
+
+        res.status(500).json({
+            mensaje: 'Error al cambiar el estado del producto'
+        });
+    }
+});
+
+// 5. CONSULTAR PRODUCTOS ACTIVOS
 app.get('/api/productos', async (req, res) => {
     try {
         const [productos] = await db.query(`
@@ -43,7 +118,7 @@ app.get('/api/productos', async (req, res) => {
     }
 });
 
-// 4. REGISTRAR NUEVO PRODUCTO
+// 6. REGISTRAR NUEVO PRODUCTO
 app.post('/api/productos', async (req, res) => {
     try {
         const {
@@ -54,7 +129,6 @@ app.post('/api/productos', async (req, res) => {
             categoria
         } = req.body;
 
-        // VALIDAR NOMBRE
         if (
             typeof nombre !== 'string' ||
             !nombre.trim() ||
@@ -65,7 +139,6 @@ app.post('/api/productos', async (req, res) => {
             });
         }
 
-        // VALIDAR PRECIO Y STOCK
         const precioNumero = Number(precio);
         const stockNumero = Number(stock);
 
@@ -114,7 +187,6 @@ app.post('/api/productos', async (req, res) => {
             });
         }
 
-        // INSERTAR PRODUCTO EN MYSQL
         const [resultado] = await db.query(
             `INSERT INTO productos
             (nombre, descripcion, precio, stock, categoria)
@@ -144,11 +216,367 @@ app.post('/api/productos', async (req, res) => {
     }
 });
 
-// 5. CONFIGURAR PUERTO SERIAL
-// CAMBIAR! Usa COM3, COM4, etc.
+// 7. REGISTRAR USUARIO EN MYSQL
+app.post('/api/usuarios', async (req, res) => {
+    try {
+        const { firebase_uid, correo } = req.body;
+
+        if (
+            typeof firebase_uid !== 'string' ||
+            !firebase_uid.trim() ||
+            firebase_uid.trim().length > 128 ||
+            typeof correo !== 'string' ||
+            !correo.trim() ||
+            correo.trim().length > 150
+        ) {
+            return res.status(400).json({
+                mensaje: 'Los datos del usuario no son válidos'
+            });
+        }
+
+        const [resultado] = await db.query(
+            `INSERT INTO usuarios (firebase_uid, correo)
+            VALUES (?, ?)`,
+            [
+                firebase_uid.trim(),
+                correo.trim()
+            ]
+        );
+
+        console.log('[OK] Usuario registrado en MySQL. ID:', resultado.insertId);
+
+        res.status(201).json({
+            mensaje: 'Usuario registrado correctamente',
+            id: resultado.insertId
+        });
+
+    } catch (error) {
+        console.log('[ERROR] Al registrar usuario:', error.message);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                mensaje: 'El usuario ya está registrado en MySQL'
+            });
+        }
+
+        res.status(500).json({
+            mensaje: 'Error al registrar el usuario'
+        });
+    }
+});
+
+// 8. REGISTRAR NUEVO PEDIDO
+app.post('/api/pedidos', async (req, res) => {
+
+    let conexion;
+    let transaccionIniciada = false;
+
+    try {
+        const { correo, productos } = req.body;
+
+        if (
+            typeof correo !== 'string' ||
+            !correo.trim() ||
+            correo.trim().length > 150
+        ) {
+            return res.status(400).json({
+                mensaje: 'El correo no es válido'
+            });
+        }
+
+        if (!Array.isArray(productos) || productos.length === 0) {
+            return res.status(400).json({
+                mensaje: 'El carrito está vacío'
+            });
+        }
+
+        const ids = new Set();
+
+        for (const producto of productos) {
+            const id = Number(producto.id);
+            const cantidad = Number(producto.cantidad);
+
+            if (
+                !Number.isInteger(id) ||
+                id <= 0 ||
+                !Number.isInteger(cantidad) ||
+                cantidad <= 0 ||
+                ids.has(id)
+            ) {
+                return res.status(400).json({
+                    mensaje: 'Los productos o cantidades no son válidos'
+                });
+            }
+
+            ids.add(id);
+        }
+
+        conexion = await db.getConnection();
+
+        await conexion.beginTransaction();
+        transaccionIniciada = true;
+
+        const [usuarios] = await conexion.query(
+            `SELECT id FROM usuarios WHERE correo = ?`,
+            [correo.trim()]
+        );
+
+        if (usuarios.length === 0) {
+            const error = new Error('No se encontró el usuario');
+            error.status = 404;
+            throw error;
+        }
+
+        const usuarioId = usuarios[0].id;
+
+        let totalCentavos = 0;
+        const detallesPedido = [];
+
+        for (const producto of productos) {
+            const id = Number(producto.id);
+            const cantidad = Number(producto.cantidad);
+
+            const [resultado] = await conexion.query(
+                `SELECT id, precio, stock, estado
+                 FROM productos
+                 WHERE id = ?
+                 FOR UPDATE`,
+                [id]
+            );
+
+            if (resultado.length === 0) {
+                const error = new Error('No se encontró un producto');
+                error.status = 404;
+                throw error;
+            }
+
+            const productoBD = resultado[0];
+
+            if (!productoBD.estado) {
+                const error = new Error(
+                    'Uno de los productos no está disponible'
+                );
+                error.status = 400;
+                throw error;
+            }
+
+            if (Number(productoBD.stock) < cantidad) {
+                const error = new Error(
+                    `Stock insuficiente para el producto ID ${id}`
+                );
+                error.status = 409;
+                throw error;
+            }
+
+            const precioCentavos = Math.round(
+                Number(productoBD.precio) * 100
+            );
+
+            const subtotalCentavos = precioCentavos * cantidad;
+
+            totalCentavos += subtotalCentavos;
+
+            detallesPedido.push({
+                producto_id: id,
+                cantidad,
+                precio_unitario: (precioCentavos / 100).toFixed(2),
+                subtotal: (subtotalCentavos / 100).toFixed(2)
+            });
+        }
+
+        const total = (totalCentavos / 100).toFixed(2);
+
+        const [pedido] = await conexion.query(
+            `INSERT INTO pedidos (usuario_id, total, estado)
+             VALUES (?, ?, ?)`,
+            [usuarioId, total, 'Pendiente']
+        );
+
+        const pedidoId = pedido.insertId;
+
+        for (const detalle of detallesPedido) {
+
+            await conexion.query(
+                `INSERT INTO detalle_pedido
+                (pedido_id, producto_id, cantidad, precio_unitario, subtotal)
+                VALUES (?, ?, ?, ?, ?)`,
+                [
+                    pedidoId,
+                    detalle.producto_id,
+                    detalle.cantidad,
+                    detalle.precio_unitario,
+                    detalle.subtotal
+                ]
+            );
+
+            const [actualizacion] = await conexion.query(
+                `UPDATE productos
+                 SET stock = stock - ?
+                 WHERE id = ? AND stock >= ?`,
+                [
+                    detalle.cantidad,
+                    detalle.producto_id,
+                    detalle.cantidad
+                ]
+            );
+
+            if (actualizacion.affectedRows !== 1) {
+                const error = new Error(
+                    'No se pudo actualizar el stock'
+                );
+                error.status = 409;
+                throw error;
+            }
+        }
+
+        await conexion.commit();
+        transaccionIniciada = false;
+
+        console.log('[OK] Pedido registrado. ID:', pedidoId);
+
+        res.status(201).json({
+            mensaje: 'Pedido registrado correctamente',
+            id: pedidoId,
+            total,
+            estado: 'Pendiente'
+        });
+
+    } catch (error) {
+
+        if (conexion && transaccionIniciada) {
+            await conexion.rollback();
+        }
+
+        console.log('[ERROR] Al registrar pedido:', error.message);
+
+        res.status(error.status || 500).json({
+            mensaje: error.status
+                ? error.message
+                : 'Error al registrar el pedido'
+        });
+
+    } finally {
+
+        if (conexion) {
+            conexion.release();
+        }
+    }
+});
+
+// 9. CONSULTAR PEDIDOS
+app.get('/api/pedidos', async (req, res) => {
+    try {
+        const [pedidos] = await db.query(`
+            SELECT
+                p.id,
+                p.usuario_id,
+                u.correo,
+                p.fecha_pedido,
+                p.total,
+                p.estado
+            FROM pedidos p
+            INNER JOIN usuarios u ON p.usuario_id = u.id
+            ORDER BY p.fecha_pedido DESC
+        `);
+
+        if (pedidos.length === 0) {
+            return res.json([]);
+        }
+
+        const idsPedidos = pedidos.map(pedido => pedido.id);
+
+        const [detalles] = await db.query(`
+            SELECT
+                dp.id,
+                dp.pedido_id,
+                dp.producto_id,
+                pr.nombre AS nombre_producto,
+                dp.cantidad,
+                dp.precio_unitario,
+                dp.subtotal
+            FROM detalle_pedido dp
+            INNER JOIN productos pr ON dp.producto_id = pr.id
+            WHERE dp.pedido_id IN (?)
+        `, [idsPedidos]);
+
+        const detallesPorPedido = {};
+
+        detalles.forEach(detalle => {
+            if (!detallesPorPedido[detalle.pedido_id]) {
+                detallesPorPedido[detalle.pedido_id] = [];
+            }
+
+            detallesPorPedido[detalle.pedido_id].push(detalle);
+        });
+
+        const resultado = pedidos.map(pedido => ({
+            ...pedido,
+            detalles: detallesPorPedido[pedido.id] || []
+        }));
+
+        res.json(resultado);
+
+    } catch (error) {
+        console.log('[ERROR] Al consultar pedidos:', error.message);
+
+        res.status(500).json({
+            mensaje: 'Error al consultar los pedidos'
+        });
+    }
+});
+
+// 10. ACTUALIZAR ESTADO DEL PEDIDO
+app.patch('/api/pedidos/:id/estado', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const { estado } = req.body;
+
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                mensaje: 'El ID del pedido no es válido'
+            });
+        }
+
+        if (estado !== 'Entregado' && estado !== 'Cancelado') {
+            return res.status(400).json({
+                mensaje: 'El estado solicitado no es válido'
+            });
+        }
+
+        const [pedidos] = await db.query(
+            `SELECT id FROM pedidos WHERE id = ?`,
+            [id]
+        );
+
+        if (pedidos.length === 0) {
+            return res.status(404).json({
+                mensaje: 'No se encontró el pedido'
+            });
+        }
+
+        await db.query(
+            `UPDATE pedidos SET estado = ? WHERE id = ?`,
+            [estado, id]
+        );
+
+        console.log('[OK] Pedido actualizado:', id, estado);
+
+        res.json({
+            mensaje: 'Estado del pedido actualizado correctamente'
+        });
+
+    } catch (error) {
+        console.log('[ERROR] Al actualizar pedido:', error.message);
+
+        res.status(500).json({
+            mensaje: 'Error al actualizar el pedido'
+        });
+    }
+});
+
+// 11. CONFIGURAR PUERTO SERIAL
 const PUERTO_ARDUINO = 'COM3';
 
-// Intentar conectar con Arduino
 let serialPort;
 
 try {
@@ -163,10 +591,10 @@ try {
     console.log('[ERROR] Error al conectar:', error.message);
 }
 
-// 6. ESTADO DEL SENSOR
+// 12. ESTADO DEL SENSOR
 let sensorValue = 0;
 
-// 7. LEER DATOS DEL ARDUINO
+// 13. LEER DATOS DEL ARDUINO
 if (serialPort) {
     const parser = serialPort.pipe(
         new ReadlineParser({ delimiter: '\n' })
@@ -175,25 +603,22 @@ if (serialPort) {
     parser.on('data', (line) => {
         console.log('[ARDUINO]', line);
 
-        // LEER SENSOR
         if (line.startsWith('SENSOR:')) {
             sensorValue = parseInt(line.split(':')[1]) || 0;
             io.emit('sensor_data', { value: sensorValue });
         }
     });
 
-    // ERROR EN EL PUERTO SERIAL
     serialPort.on('error', (error) => {
         console.log('[ERROR] Error en el puerto:', error.message);
     });
 
-    // PUERTO ABIERTO CORRECTAMENTE
     serialPort.on('open', () => {
         console.log('[OK] Arduino conectado en:', PUERTO_ARDUINO);
     });
 }
 
-// 8. MANEJAR CONEXIONES DE LA APP
+// 14. MANEJAR CONEXIONES DE LA APP
 io.on('connection', (socket) => {
     console.log('[APP] App conectada');
 
@@ -277,7 +702,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// 9. INICIAR SERVIDOR
+// 15. INICIAR SERVIDOR
 const PORT = 3000;
 
 server.listen(PORT, '0.0.0.0', () => {
@@ -289,7 +714,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('========================================');
 });
 
-// 10. MANEJAR ERRORES GENERALES
+// 16. MANEJAR ERRORES GENERALES
 process.on('uncaughtException', (error) => {
     console.log('[ERROR] Error inesperado:', error.message);
 });

@@ -1,3 +1,4 @@
+
 // src/screens/RegisterScreen.js
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -11,10 +12,8 @@ import {
     Platform
 } from 'react-native';
 import { useState } from 'react';
-import { getAuth } from 'firebase/auth';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { firebaseConfig } from '../firebase/FirebaseConfig';
-import { initializeApp } from 'firebase/app';
+import { auth } from '../firebase/FirebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen({ navigation }) {
@@ -22,17 +21,49 @@ export default function RegisterScreen({ navigation }) {
     const [password, setPassword] = useState('');
     const [mostrarPassword, setMostrarPassword] = useState(false);
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    const Registro = async () => {
+        try {
+            // 1. REGISTRAR USUARIO EN FIREBASE
+            const resultado = await createUserWithEmailAndPassword(
+                auth,
+                email.trim(),
+                password
+            );
 
-    const Registro = () => {
-        createUserWithEmailAndPassword(auth, email, password)
-            .then(() => {
-                alert("Usuario Registrado");
-            })
-            .catch(error => {
-                alert(error);
-            });
+            // 2. OBTENER DATOS DE FIREBASE
+            const firebase_uid = resultado.user.uid;
+            const correo = resultado.user.email;
+
+            // 3. ENVIAR DATOS AL SERVIDOR PARA GUARDAR EN MYSQL
+            const respuesta = await fetch(
+                'http://192.168.1.17:3000/api/usuarios',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        firebase_uid,
+                        correo
+                    })
+                }
+            );
+
+            const datos = await respuesta.json();
+
+            if (!respuesta.ok) {
+                throw new Error(
+                    datos.mensaje || 'Error al registrar usuario en MySQL'
+                );
+            }
+
+            // 4. CONFIRMAR REGISTRO
+            alert('Usuario registrado correctamente');
+
+        } catch (error) {
+            console.log('[ERROR] Registro:', error.message);
+            alert(error.message);
+        }
     };
 
     return (
@@ -218,7 +249,7 @@ const styles = StyleSheet.create({
 
     subtitle: {
         fontSize: 13,
-        color: '#93C5FD', // Azul opaco/suave distintivo para el registro
+        color: '#93C5FD',
         marginTop: 5,
         fontWeight: '500',
         letterSpacing: 0.2,
@@ -295,7 +326,7 @@ const styles = StyleSheet.create({
     registerButton: {
         width: '90%',
         height: 50,
-        backgroundColor: '#0369A1', // Azul acero/opaco elegante para diferenciarlo del login
+        backgroundColor: '#0369A1',
         borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
@@ -325,7 +356,7 @@ const styles = StyleSheet.create({
     },
 
     linkTextBold: {
-        color: '#60A5FA', // Azul más claro para el enlace de regreso al login
+        color: '#60A5FA',
         fontSize: 14,
         fontWeight: '700',
         marginLeft: 5,

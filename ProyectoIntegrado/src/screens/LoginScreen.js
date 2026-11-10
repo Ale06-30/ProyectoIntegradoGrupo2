@@ -1,3 +1,4 @@
+
 // src/screens/LoginScreen.js
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -13,16 +14,9 @@ import {
     Modal
 } from 'react-native';
 import { useState } from 'react';
-import {
-    getAuth,
-    signInWithEmailAndPassword
-} from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
-import { firebaseConfig } from '../firebase/FirebaseConfig';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase/FirebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 
 // Contraseña adicional para confirmar al administrador
 const CLAVE_ADMIN = 'Admin123';
@@ -46,12 +40,11 @@ export default function LoginScreen({ navigation }) {
             .then(() => {
                 setModalAdmin(false);
                 setClaveAdmin('');
-                
 
                 if (tipoUsuario === 'administrador') {
-                    navigation.navigate('admin'); 
+                    navigation.navigate('admin');
                 } else {
-                    navigation.navigate('user'); 
+                    navigation.navigate('user');
                 }
             })
             .catch((error) => {

@@ -1,8 +1,9 @@
+
 // Importamos la función que permite crear una navegación mediante pestañas inferiores.
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 // Importamos nuestras pantallas.
-import ProductosUser from '../screens/ProductosUser';
+import ProductStackNavigator from './ProductStackNavigator';
 import SeguimientoUser from '../screens/SeguimientoUser';
 import SesionUser from '../screens/SesionUser';
 
@@ -28,7 +29,7 @@ export default function UserTabNavigator() {
 
             <Tab.Screen
                 name="Productos"
-                component={ProductosUser}
+                component={ProductStackNavigator}
                 options={{
                     tabBarIcon: ({ focused, color, size }) => (
                         <MaterialIcons

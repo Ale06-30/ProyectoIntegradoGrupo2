@@ -1,15 +1,24 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    SafeAreaView,
     ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    ActivityIndicator,
+    Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const API_URL = 'http://192.168.1.17:3000/api/pedidos';
 
 export default function admin4Screen({ navigation }) {
     const [filtro, setFiltro] = useState('Todos');
+    const [pedidos, setPedidos] = useState([]);
+    const [cargando, setCargando] = useState(true);
+    const [actualizando, setActualizando] = useState(false);
+    const [error, setError] = useState('');
 
     const filtros = [
         'Todos',
@@ -19,6 +28,69 @@ export default function admin4Screen({ navigation }) {
         'Entregado',
         'Cancelado'
     ];
+
+    // CONSULTAR PEDIDOS DESDE MYSQL
+    const cargarPedidos = useCallback(async (recarga = false) => {
+        try {
+            if (recarga) {
+                setActualizando(true);
+            } else {
+                setCargando(true);
+            }
+
+            setError('');
+
+            const respuesta = await fetch(API_URL);
+
+            if (!respuesta.ok) {
+                throw new Error('No se pudieron consultar los pedidos');
+            }
+
+            const datos = await respuesta.json();
+
+            if (!Array.isArray(datos)) {
+                throw new Error('La respuesta del servidor no es válida');
+            }
+
+            setPedidos(datos);
+
+        } catch (err) {
+            console.log('[ERROR] Pedidos:', err.message);
+            setError(err.message);
+
+        } finally {
+            setCargando(false);
+            setActualizando(false);
+        }
+    }, []);
+
+    // CARGAR AL ABRIR LA PANTALLA
+    useEffect(() => {
+        cargarPedidos();
+    }, [cargarPedidos]);
+
+    // CONTAR PEDIDOS POR ESTADO
+    const contarEstado = (estado) => {
+        return pedidos.filter(pedido => pedido.estado === estado).length;
+    };
+
+    // APLICAR FILTRO
+    const pedidosFiltrados = pedidos.filter(pedido => {
+        return filtro === 'Todos' || pedido.estado === filtro;
+    });
+
+    // FORMATEAR FECHA
+    const formatearFecha = (fecha) => {
+        if (!fecha) return 'Fecha no disponible';
+
+        const fechaObjeto = new Date(fecha);
+
+        if (isNaN(fechaObjeto.getTime())) {
+            return 'Fecha no disponible';
+        }
+
+        return fechaObjeto.toLocaleString();
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -39,28 +111,47 @@ export default function admin4Screen({ navigation }) {
                 {/* RESUMEN */}
                 <View style={styles.resumenContainer}>
                     <View style={styles.resumenCard}>
-                        <Text style={styles.resumenNumero}>—</Text>
+                        <Text style={styles.resumenNumero}>
+                            {contarEstado('Pendiente')}
+                        </Text>
                         <Text style={styles.resumenTexto}>Pendientes</Text>
                     </View>
 
                     <View style={styles.resumenCard}>
-                        <Text style={styles.resumenNumero}>—</Text>
+                        <Text style={styles.resumenNumero}>
+                            {contarEstado('En preparación')}
+                        </Text>
                         <Text style={styles.resumenTexto}>
                             En preparación
                         </Text>
                     </View>
 
                     <View style={styles.resumenCard}>
-                        <Text style={styles.resumenNumero}>—</Text>
+                        <Text style={styles.resumenNumero}>
+                            {contarEstado('Enviado')}
+                        </Text>
                         <Text style={styles.resumenTexto}>Enviados</Text>
                     </View>
                 </View>
 
-                {/* FILTROS */}
-                <Text style={styles.sectionTitle}>
-                    Pedidos registrados
-                </Text>
+                {/* TITULO Y ACTUALIZAR */}
+                <View style={styles.tituloContainer}>
+                    <Text style={styles.sectionTitle}>
+                        Pedidos registrados
+                    </Text>
 
+                    <TouchableOpacity
+                        style={styles.actualizarButton}
+                        onPress={() => cargarPedidos(true)}
+                        disabled={actualizando}
+                    >
+                        <Text style={styles.actualizarTexto}>
+                            {actualizando ? 'Actualizando...' : '↻ Actualizar'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* FILTROS */}
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -87,24 +178,125 @@ export default function admin4Screen({ navigation }) {
                     ))}
                 </ScrollView>
 
-                {/* CONTENIDO */}
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyIcon}>📦</Text>
+                {/* CARGANDO */}
+                {cargando && (
+                    <View style={styles.estadoContainer}>
+                        <ActivityIndicator size="large" color="#A78BFA" />
+                        <Text style={styles.estadoTexto}>
+                            Cargando pedidos...
+                        </Text>
+                    </View>
+                )}
 
-                    <Text style={styles.emptyTitle}>
-                        Próximamente
-                    </Text>
+                {/* ERROR */}
+                {!cargando && error !== '' && (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyIcon}>⚠️</Text>
 
-                    <Text style={styles.emptyText}>
-                        Aquí aparecerán las compras realizadas por
-                        los usuarios de Mystery Box.
-                    </Text>
+                        <Text style={styles.emptyTitle}>
+                            Error de conexión
+                        </Text>
 
-                    <Text style={styles.emptySubtext}>
-                        Los pedidos se cargarán directamente desde
-                        nuestra base de datos MySQL.
-                    </Text>
-                </View>
+                        <Text style={styles.emptyText}>
+                            {error}
+                        </Text>
+
+                        <TouchableOpacity
+                            style={styles.reintentarButton}
+                            onPress={() => cargarPedidos()}
+                        >
+                            <Text style={styles.reintentarTexto}>
+                                Reintentar
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* LISTA VACIA */}
+                {!cargando && error === '' && pedidosFiltrados.length === 0 && (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyIcon}>📦</Text>
+
+                        <Text style={styles.emptyTitle}>
+                            {pedidos.length === 0
+                                ? 'Sin pedidos registrados'
+                                : 'No hay pedidos en este estado'}
+                        </Text>
+
+                        <Text style={styles.emptyText}>
+                            {pedidos.length === 0
+                                ? 'Aquí aparecerán las compras realizadas por los usuarios de Mystery Box.'
+                                : 'No se encontraron pedidos con el filtro seleccionado.'}
+                        </Text>
+
+                        <Text style={styles.emptySubtext}>
+                            Los pedidos se consultan directamente desde MySQL.
+                        </Text>
+                    </View>
+                )}
+
+                {/* LISTA DE PEDIDOS */}
+                {!cargando && error === '' && pedidosFiltrados.map((pedido) => (
+                    <View
+                        key={pedido.id}
+                        style={styles.pedidoCard}
+                    >
+                        <View style={styles.pedidoHeader}>
+                            <Text style={styles.pedidoTitulo}>
+                                Pedido #{pedido.id}
+                            </Text>
+
+                            <Text style={styles.pedidoEstado}>
+                                {pedido.estado}
+                            </Text>
+                        </View>
+
+                        <Text style={styles.datoPedido}>
+                            Cliente: {pedido.correo}
+                        </Text>
+
+                        <Text style={styles.datoPedido}>
+                            Fecha: {formatearFecha(pedido.fecha_pedido)}
+                        </Text>
+
+                        <View style={styles.separador} />
+
+                        <Text style={styles.productosTitulo}>
+                            Productos
+                        </Text>
+
+                        {pedido.detalles && pedido.detalles.length > 0 ? (
+                            pedido.detalles.map((detalle) => (
+                                <View
+                                    key={detalle.id}
+                                    style={styles.productoFila}
+                                >
+                                    <Text style={styles.productoNombre}>
+                                        {detalle.nombre_producto} x{detalle.cantidad}
+                                    </Text>
+
+                                    <Text style={styles.productoPrecio}>
+                                        Q{Number(detalle.subtotal).toFixed(2)}
+                                    </Text>
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.datoPedido}>
+                                Sin detalles disponibles
+                            </Text>
+                        )}
+
+                        <View style={styles.separador} />
+
+                        <View style={styles.totalContainer}>
+                            <Text style={styles.totalTexto}>Total</Text>
+
+                            <Text style={styles.totalPrecio}>
+                                Q{Number(pedido.total).toFixed(2)}
+                            </Text>
+                        </View>
+                    </View>
+                ))}
 
             </ScrollView>
         </SafeAreaView>
@@ -177,12 +369,31 @@ const styles = StyleSheet.create({
         marginTop: 7
     },
 
+    tituloContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginHorizontal: 20,
+        marginBottom: 15
+    },
+
     sectionTitle: {
         color: '#FFFFFF',
         fontSize: 20,
-        fontWeight: 'bold',
-        marginHorizontal: 20,
-        marginBottom: 15
+        fontWeight: 'bold'
+    },
+
+    actualizarButton: {
+        backgroundColor: '#27272A',
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        borderRadius: 12
+    },
+
+    actualizarTexto: {
+        color: '#A78BFA',
+        fontSize: 12,
+        fontWeight: 'bold'
     },
 
     filtrosContainer: {
@@ -212,6 +423,17 @@ const styles = StyleSheet.create({
         color: '#FFFFFF'
     },
 
+    estadoContainer: {
+        alignItems: 'center',
+        padding: 35
+    },
+
+    estadoTexto: {
+        color: '#A1A1AA',
+        marginTop: 15,
+        fontSize: 14
+    },
+
     emptyContainer: {
         backgroundColor: '#18181B',
         marginHorizontal: 18,
@@ -230,7 +452,8 @@ const styles = StyleSheet.create({
         color: '#A78BFA',
         fontSize: 22,
         fontWeight: 'bold',
-        marginBottom: 12
+        marginBottom: 12,
+        textAlign: 'center'
     },
 
     emptyText: {
@@ -246,5 +469,105 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 15,
         lineHeight: 19
+    },
+
+    reintentarButton: {
+        backgroundColor: '#7C3AED',
+        paddingVertical: 12,
+        paddingHorizontal: 25,
+        borderRadius: 12,
+        marginTop: 20
+    },
+
+    reintentarTexto: {
+        color: '#FFFFFF',
+        fontWeight: 'bold'
+    },
+
+    pedidoCard: {
+        backgroundColor: '#18181B',
+        marginHorizontal: 18,
+        marginBottom: 18,
+        padding: 20,
+        borderRadius: 20,
+        elevation: 4
+    },
+
+    pedidoHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15
+    },
+
+    pedidoTitulo: {
+        color: '#FACC15',
+        fontSize: 18,
+        fontWeight: 'bold'
+    },
+
+    pedidoEstado: {
+        color: '#A78BFA',
+        fontSize: 12,
+        fontWeight: 'bold',
+        backgroundColor: '#27272A',
+        paddingVertical: 7,
+        paddingHorizontal: 10,
+        borderRadius: 10
+    },
+
+    datoPedido: {
+        color: '#A1A1AA',
+        fontSize: 13,
+        marginBottom: 8
+    },
+
+    separador: {
+        height: 1,
+        backgroundColor: '#3F3F46',
+        marginVertical: 13
+    },
+
+    productosTitulo: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: 'bold',
+        marginBottom: 12
+    },
+
+    productoFila: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10
+    },
+
+    productoNombre: {
+        color: '#D4D4D8',
+        fontSize: 13,
+        flex: 1,
+        marginRight: 10
+    },
+
+    productoPrecio: {
+        color: '#D4D4D8',
+        fontSize: 13
+    },
+
+    totalContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+    },
+
+    totalTexto: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
+
+    totalPrecio: {
+        color: '#FACC15',
+        fontSize: 19,
+        fontWeight: 'bold'
     }
 });

@@ -4,13 +4,14 @@ import {
     View,
     Text,
     StyleSheet,
-    SafeAreaView,
     ScrollView,
     TouchableOpacity,
     ActivityIndicator
 } from 'react-native';
 
-//agregar su propia IP en esta parte
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Agregar su propia IP en esta parte
 const URL_API = 'http://192.168.1.17:3000/api/productos';
 
 export default function ProductosUser({ navigation }) {
@@ -48,9 +49,11 @@ export default function ProductosUser({ navigation }) {
         cargarProductos();
     }, []);
 
+    // ABRIR DETALLES DEL PRODUCTO
     const manejarDetalles = (producto) => {
-        console.log('Viendo detalles de:', producto.nombre);
-        // Aquí conectaremos la pantalla de detalles.
+        navigation.navigate('ProductDetail', {
+            producto: producto
+        });
     };
 
     return (
@@ -63,6 +66,14 @@ export default function ProductosUser({ navigation }) {
 
                     {/* ENCABEZADO */}
                     <View style={styles.headerContainer}>
+
+                        <TouchableOpacity
+                            style={styles.botonCarrito}
+                            onPress={() => navigation.navigate('Carrito')}
+                        >
+                            <Text style={styles.iconoCarrito}>🛒</Text>
+                        </TouchableOpacity>
+
                         <Text style={styles.title}>Mystery Box</Text>
 
                         <Text style={styles.subtitle}>
@@ -216,6 +227,25 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 35,
         paddingBottom: 30,
+    },
+
+    botonCarrito: {
+        position: 'absolute',
+        right: 0,
+        top: 30,
+        width: 45,
+        height: 45,
+        backgroundColor: '#21172F',
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#392653',
+        zIndex: 1,
+    },
+
+    iconoCarrito: {
+        fontSize: 22,
     },
 
     title: {

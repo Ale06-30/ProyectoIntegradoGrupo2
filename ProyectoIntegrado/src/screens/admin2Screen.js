@@ -1,17 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    SafeAreaView,
     ScrollView,
     TouchableOpacity,
     TextInput,
     ActivityIndicator,
     Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const API_URL = 'http://192.168.1.17:3000/api/productos';
+// Direcciones de la API
+const API_BASE_URL = 'http://192.168.1.17:3000';
+const API_URL = `${API_BASE_URL}/api/productos`;
+const API_ADMIN_URL = `${API_BASE_URL}/api/admin/productos`;
 
 export default function admin2Screen({ navigation }) {
 
@@ -19,6 +23,7 @@ export default function admin2Screen({ navigation }) {
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(false);
     const [guardando, setGuardando] = useState(false);
+    const [actualizandoId, setActualizandoId] = useState(null);
 
     // Datos del formulario
     const [nombre, setNombre] = useState('');
@@ -27,13 +32,18 @@ export default function admin2Screen({ navigation }) {
     const [stock, setStock] = useState('');
     const [categoria, setCategoria] = useState('');
 
-    // Obtener productos de MySQL
+    // Comprobar si un producto está habilitado
+    const productoHabilitado = (estado) => {
+        return estado === true || estado === 1 || estado === '1';
+    };
+
+    // Obtener todos los productos, incluso los deshabilitados
     const obtenerProductos = async () => {
         try {
             setCargando(true);
             setError(false);
 
-            const respuesta = await fetch(API_URL);
+            const respuesta = await fetch(API_ADMIN_URL);
 
             if (!respuesta.ok) {
                 throw new Error('No se pudieron obtener los productos.');
@@ -78,7 +88,10 @@ export default function admin2Screen({ navigation }) {
         }
 
         if (!Number.isInteger(stockNumero) || stockNumero < 0) {
-            Alert.alert('Stock inválido', 'Ingresa una cantidad entera igual o mayor que cero.');
+            Alert.alert(
+                'Stock inválido',
+                'Ingresa una cantidad entera igual o mayor que cero.'
+            );
             return;
         }
 
@@ -132,6 +145,74 @@ export default function admin2Screen({ navigation }) {
         } finally {
             setGuardando(false);
         }
+    };
+
+    // Habilitar o deshabilitar un producto
+    const cambiarEstadoProducto = (producto) => {
+
+        const estaHabilitado = productoHabilitado(producto.estado);
+        const nuevoEstado = !estaHabilitado;
+
+        const accion = nuevoEstado ? 'habilitar' : 'deshabilitar';
+
+        Alert.alert(
+            'Confirmar acción',
+            `¿Estás seguro de que deseas ${accion} "${producto.nombre}"?`,
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel'
+                },
+                {
+                    text: 'Confirmar',
+                    onPress: async () => {
+                        try {
+                            setActualizandoId(producto.id);
+
+                            const respuesta = await fetch(
+                                `${API_URL}/${producto.id}/estado`,
+                                {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        estado: nuevoEstado
+                                    })
+                                }
+                            );
+
+                            const resultado = await respuesta.json();
+
+                            if (!respuesta.ok) {
+                                throw new Error(
+                                    resultado.mensaje ||
+                                    'No se pudo cambiar el estado.'
+                                );
+                            }
+
+                            await obtenerProductos();
+
+                            Alert.alert(
+                                'Operación exitosa',
+                                resultado.mensaje
+                            );
+
+                        } catch (err) {
+                            console.log('Error al cambiar estado:', err);
+
+                            Alert.alert(
+                                'Error',
+                                err.message ||
+                                'No se pudo conectar con el servidor.'
+                            );
+                        } finally {
+                            setActualizandoId(null);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     return (
@@ -243,6 +324,7 @@ export default function admin2Screen({ navigation }) {
                     <TouchableOpacity
                         style={styles.refreshButton}
                         onPress={obtenerProductos}
+                        disabled={cargando}
                     >
                         <Text style={styles.refreshText}>
                             ↻ Actualizar
@@ -287,40 +369,81 @@ export default function admin2Screen({ navigation }) {
 
                 ) : (
 
-                    productos.map((producto) => (
+                    productos.map((producto) => {
 
-                        <View
-                            key={producto.id}
-                            style={styles.productCard}
-                        >
-                            <View style={styles.productIcon}>
-                                <Text style={styles.packageEmoji}>
-                                    📦
-                                </Text>
+                        const habilitado = productoHabilitado(producto.estado);
+
+                        return (
+                            <View
+                                key={producto.id}
+                                style={styles.productCard}
+                            >
+
+                                <View style={styles.productIcon}>
+                                    <Text style={styles.packageEmoji}>
+                                        📦
+                                    </Text>
+                                </View>
+
+                                <View style={styles.productInfo}>
+
+                                    <Text style={styles.productName}>
+                                        {producto.nombre}
+                                    </Text>
+
+                                    <Text style={styles.productDescription}>
+                                        {producto.categoria || 'Sin categoría'}
+                                    </Text>
+
+                                    <Text style={styles.productPrice}>
+                                        Q{Number(producto.precio).toFixed(2)}
+                                    </Text>
+
+                                    <Text style={styles.productStock}>
+                                        Stock: {producto.stock} unidades
+                                    </Text>
+
+                                    <Text
+                                        style={[
+                                            styles.productStatus,
+                                            habilitado
+                                                ? styles.statusActive
+                                                : styles.statusInactive
+                                        ]}
+                                    >
+                                        {habilitado
+                                            ? '● Producto habilitado'
+                                            : '● Producto deshabilitado'}
+                                    </Text>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.stateButton,
+                                            habilitado
+                                                ? styles.disableButton
+                                                : styles.enableButton,
+                                            actualizandoId === producto.id &&
+                                            styles.disabledButton
+                                        ]}
+                                        onPress={() => cambiarEstadoProducto(producto)}
+                                        disabled={actualizandoId === producto.id}
+                                    >
+                                        {actualizandoId === producto.id ? (
+                                            <ActivityIndicator color="#FFFFFF" />
+                                        ) : (
+                                            <Text style={styles.stateButtonText}>
+                                                {habilitado
+                                                    ? 'Deshabilitar producto'
+                                                    : 'Habilitar producto'}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+
+                                </View>
+
                             </View>
-
-                            <View style={styles.productInfo}>
-
-                                <Text style={styles.productName}>
-                                    {producto.nombre}
-                                </Text>
-
-                                <Text style={styles.productDescription}>
-                                    {producto.categoria || 'Sin categoría'}
-                                </Text>
-
-                                <Text style={styles.productPrice}>
-                                    Q{Number(producto.precio).toFixed(2)}
-                                </Text>
-
-                                <Text style={styles.productStock}>
-                                    Stock: {producto.stock} unidades
-                                </Text>
-
-                            </View>
-                        </View>
-
-                    ))
+                        );
+                    })
 
                 )}
 
@@ -531,6 +654,41 @@ const styles = StyleSheet.create({
         color: '#A78BFA',
         fontSize: 13,
         marginTop: 5
+    },
+
+    productStatus: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        marginTop: 10
+    },
+
+    statusActive: {
+        color: '#4ADE80'
+    },
+
+    statusInactive: {
+        color: '#F87171'
+    },
+
+    stateButton: {
+        padding: 12,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginTop: 12
+    },
+
+    disableButton: {
+        backgroundColor: '#9F3434'
+    },
+
+    enableButton: {
+        backgroundColor: '#15803D'
+    },
+
+    stateButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 13
     }
 
 });
