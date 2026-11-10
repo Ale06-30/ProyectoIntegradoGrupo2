@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Direcciones de la API
-const API_BASE_URL = 'http://192.168.1.17:3000';
+const API_BASE_URL = 'http://192.168.1.62:3000';
 const API_URL = `${API_BASE_URL}/api/productos`;
 const API_ADMIN_URL = `${API_BASE_URL}/api/admin/productos`;
 

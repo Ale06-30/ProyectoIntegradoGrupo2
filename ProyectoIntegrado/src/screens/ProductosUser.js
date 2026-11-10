@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Agregar su propia IP en esta parte
-const URL_API = 'http://192.168.1.17:3000/api/productos';
+const URL_API = 'http://192.168.1.62:3000/api/productos';
 
 export default function ProductosUser({ navigation }) {
 

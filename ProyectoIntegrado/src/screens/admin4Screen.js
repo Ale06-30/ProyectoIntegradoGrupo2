@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const API_URL = 'http://192.168.1.17:3000/api/pedidos';
+const API_URL = 'http://192.168.1.62:3000/api/pedidos';
 
 export default function admin4Screen({ navigation }) {
     const [filtro, setFiltro] = useState('Todos');
@@ -69,9 +69,68 @@ export default function admin4Screen({ navigation }) {
         cargarPedidos();
     }, [cargarPedidos]);
 
+    // ACTUALIZAR ESTADO DEL PEDIDO
+    const actualizarEstado = (pedido, nuevoEstado) => {
+        Alert.alert(
+            'Actualizar pedido',
+            `¿Deseas cambiar el pedido #${pedido.id} a "${nuevoEstado}"?`,
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel'
+                },
+                {
+                    text: 'Confirmar',
+                    onPress: async () => {
+                        try {
+                            const respuesta = await fetch(
+                                `${API_URL}/${pedido.id}/estado`,
+                                {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        estado: nuevoEstado
+                                    })
+                                }
+                            );
+
+                            const datos = await respuesta.json();
+
+                            if (!respuesta.ok) {
+                                throw new Error(
+                                    datos.mensaje ||
+                                    'No se pudo actualizar el pedido'
+                                );
+                            }
+
+                            Alert.alert(
+                                'Pedido actualizado',
+                                datos.mensaje
+                            );
+
+                            await cargarPedidos(true);
+
+                        } catch (error) {
+                            console.log(
+                                '[ERROR] Estado del pedido:',
+                                error.message
+                            );
+
+                            Alert.alert('Error', error.message);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     // CONTAR PEDIDOS POR ESTADO
     const contarEstado = (estado) => {
-        return pedidos.filter(pedido => pedido.estado === estado).length;
+        return pedidos.filter(
+            pedido => pedido.estado === estado
+        ).length;
     };
 
     // APLICAR FILTRO
@@ -114,7 +173,9 @@ export default function admin4Screen({ navigation }) {
                         <Text style={styles.resumenNumero}>
                             {contarEstado('Pendiente')}
                         </Text>
-                        <Text style={styles.resumenTexto}>Pendientes</Text>
+                        <Text style={styles.resumenTexto}>
+                            Pendientes
+                        </Text>
                     </View>
 
                     <View style={styles.resumenCard}>
@@ -130,7 +191,9 @@ export default function admin4Screen({ navigation }) {
                         <Text style={styles.resumenNumero}>
                             {contarEstado('Enviado')}
                         </Text>
-                        <Text style={styles.resumenTexto}>Enviados</Text>
+                        <Text style={styles.resumenTexto}>
+                            Enviados
+                        </Text>
                     </View>
                 </View>
 
@@ -146,7 +209,9 @@ export default function admin4Screen({ navigation }) {
                         disabled={actualizando}
                     >
                         <Text style={styles.actualizarTexto}>
-                            {actualizando ? 'Actualizando...' : '↻ Actualizar'}
+                            {actualizando
+                                ? 'Actualizando...'
+                                : '↻ Actualizar'}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -181,7 +246,10 @@ export default function admin4Screen({ navigation }) {
                 {/* CARGANDO */}
                 {cargando && (
                     <View style={styles.estadoContainer}>
-                        <ActivityIndicator size="large" color="#A78BFA" />
+                        <ActivityIndicator
+                            size="large"
+                            color="#A78BFA"
+                        />
                         <Text style={styles.estadoTexto}>
                             Cargando pedidos...
                         </Text>
@@ -213,90 +281,140 @@ export default function admin4Screen({ navigation }) {
                 )}
 
                 {/* LISTA VACIA */}
-                {!cargando && error === '' && pedidosFiltrados.length === 0 && (
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyIcon}>📦</Text>
+                {!cargando &&
+                    error === '' &&
+                    pedidosFiltrados.length === 0 && (
+                        <View style={styles.emptyContainer}>
+                            <Text style={styles.emptyIcon}>📦</Text>
 
-                        <Text style={styles.emptyTitle}>
-                            {pedidos.length === 0
-                                ? 'Sin pedidos registrados'
-                                : 'No hay pedidos en este estado'}
-                        </Text>
+                            <Text style={styles.emptyTitle}>
+                                {pedidos.length === 0
+                                    ? 'Sin pedidos registrados'
+                                    : 'No hay pedidos en este estado'}
+                            </Text>
 
-                        <Text style={styles.emptyText}>
-                            {pedidos.length === 0
-                                ? 'Aquí aparecerán las compras realizadas por los usuarios de Mystery Box.'
-                                : 'No se encontraron pedidos con el filtro seleccionado.'}
-                        </Text>
+                            <Text style={styles.emptyText}>
+                                {pedidos.length === 0
+                                    ? 'Aquí aparecerán las compras realizadas por los usuarios de Mystery Box.'
+                                    : 'No se encontraron pedidos con el filtro seleccionado.'}
+                            </Text>
 
-                        <Text style={styles.emptySubtext}>
-                            Los pedidos se consultan directamente desde MySQL.
-                        </Text>
-                    </View>
-                )}
+                            <Text style={styles.emptySubtext}>
+                                Los pedidos se consultan directamente desde MySQL.
+                            </Text>
+                        </View>
+                    )}
 
                 {/* LISTA DE PEDIDOS */}
-                {!cargando && error === '' && pedidosFiltrados.map((pedido) => (
-                    <View
-                        key={pedido.id}
-                        style={styles.pedidoCard}
-                    >
-                        <View style={styles.pedidoHeader}>
-                            <Text style={styles.pedidoTitulo}>
-                                Pedido #{pedido.id}
-                            </Text>
+                {!cargando &&
+                    error === '' &&
+                    pedidosFiltrados.map((pedido) => (
+                        <View
+                            key={pedido.id}
+                            style={styles.pedidoCard}
+                        >
+                            <View style={styles.pedidoHeader}>
+                                <Text style={styles.pedidoTitulo}>
+                                    Pedido #{pedido.id}
+                                </Text>
 
-                            <Text style={styles.pedidoEstado}>
-                                {pedido.estado}
-                            </Text>
-                        </View>
+                                <Text style={styles.pedidoEstado}>
+                                    {pedido.estado}
+                                </Text>
+                            </View>
 
-                        <Text style={styles.datoPedido}>
-                            Cliente: {pedido.correo}
-                        </Text>
-
-                        <Text style={styles.datoPedido}>
-                            Fecha: {formatearFecha(pedido.fecha_pedido)}
-                        </Text>
-
-                        <View style={styles.separador} />
-
-                        <Text style={styles.productosTitulo}>
-                            Productos
-                        </Text>
-
-                        {pedido.detalles && pedido.detalles.length > 0 ? (
-                            pedido.detalles.map((detalle) => (
-                                <View
-                                    key={detalle.id}
-                                    style={styles.productoFila}
-                                >
-                                    <Text style={styles.productoNombre}>
-                                        {detalle.nombre_producto} x{detalle.cantidad}
-                                    </Text>
-
-                                    <Text style={styles.productoPrecio}>
-                                        Q{Number(detalle.subtotal).toFixed(2)}
-                                    </Text>
-                                </View>
-                            ))
-                        ) : (
                             <Text style={styles.datoPedido}>
-                                Sin detalles disponibles
+                                Cliente: {pedido.correo}
                             </Text>
-                        )}
 
-                        <View style={styles.separador} />
-
-                        <View style={styles.totalContainer}>
-                            <Text style={styles.totalTexto}>Total</Text>
-
-                            <Text style={styles.totalPrecio}>
-                                Q{Number(pedido.total).toFixed(2)}
+                            <Text style={styles.datoPedido}>
+                                Fecha: {formatearFecha(pedido.fecha_pedido)}
                             </Text>
+
+                            <View style={styles.separador} />
+
+                            <Text style={styles.productosTitulo}>
+                                Productos
+                            </Text>
+
+                            {pedido.detalles &&
+                                pedido.detalles.length > 0 ? (
+                                    pedido.detalles.map((detalle) => (
+                                        <View
+                                            key={detalle.id}
+                                            style={styles.productoFila}
+                                        >
+                                            <Text style={styles.productoNombre}>
+                                                {detalle.nombre_producto} x{detalle.cantidad}
+                                            </Text>
+
+                                            <Text style={styles.productoPrecio}>
+                                                Q{Number(detalle.subtotal).toFixed(2)}
+                                            </Text>
+                                        </View>
+                                    ))
+                                ) : (
+                                    <Text style={styles.datoPedido}>
+                                        Sin detalles disponibles
+                                    </Text>
+                                )}
+
+                            <View style={styles.separador} />
+
+                            {/* TOTAL */}
+                            <View style={styles.totalContainer}>
+                                <Text style={styles.totalTexto}>
+                                    Total
+                                </Text>
+
+                                <Text style={styles.totalPrecio}>
+                                    Q{Number(pedido.total).toFixed(2)}
+                                </Text>
+                            </View>
+
+                            {/* BOTONES PARA ACTUALIZAR ESTADO */}
+                            {pedido.estado !== 'Entregado' &&
+                                pedido.estado !== 'Cancelado' && (
+                                    <>
+                                        <View style={styles.separador} />
+
+                                        <Text style={styles.productosTitulo}>
+                                            Gestionar pedido
+                                        </Text>
+
+                                        <View style={styles.botonesEstado}>
+                                            <TouchableOpacity
+                                                style={styles.botonEntregado}
+                                                onPress={() =>
+                                                    actualizarEstado(
+                                                        pedido,
+                                                        'Entregado'
+                                                    )
+                                                }
+                                            >
+                                                <Text style={styles.textoBotonEstado}>
+                                                    ✓ Entregado
+                                                </Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={styles.botonCancelado}
+                                                onPress={() =>
+                                                    actualizarEstado(
+                                                        pedido,
+                                                        'Cancelado'
+                                                    )
+                                                }
+                                            >
+                                                <Text style={styles.textoBotonEstado}>
+                                                    ✕ Cancelar
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </>
+                                )}
                         </View>
-                    </View>
-                ))}
+                    ))}
 
             </ScrollView>
         </SafeAreaView>
@@ -568,6 +686,36 @@ const styles = StyleSheet.create({
     totalPrecio: {
         color: '#FACC15',
         fontSize: 19,
+        fontWeight: 'bold'
+    },
+
+    // NUEVOS ESTILOS PARA GESTIONAR PEDIDOS
+    botonesEstado: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+        gap: 10
+    },
+
+    botonEntregado: {
+        flex: 1,
+        backgroundColor: '#166534',
+        paddingVertical: 13,
+        borderRadius: 12,
+        alignItems: 'center'
+    },
+
+    botonCancelado: {
+        flex: 1,
+        backgroundColor: '#991B1B',
+        paddingVertical: 13,
+        borderRadius: 12,
+        alignItems: 'center'
+    },
+
+    textoBotonEstado: {
+        color: '#FFFFFF',
+        fontSize: 12,
         fontWeight: 'bold'
     }
 });

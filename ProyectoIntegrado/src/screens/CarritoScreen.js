@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CartContext } from '../navigation/CartContext';
 import { auth } from '../firebase/FirebaseConfig';
 
-const API_URL = 'http://192.168.1.17:3000';
+const API_URL = 'http://192.168.1.62:3000';
 
 export default function CarritoScreen({ navigation }) {
 

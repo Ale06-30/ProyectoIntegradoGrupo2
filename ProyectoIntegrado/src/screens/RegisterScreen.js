@@ -36,7 +36,7 @@ export default function RegisterScreen({ navigation }) {
 
             // 3. ENVIAR DATOS AL SERVIDOR PARA GUARDAR EN MYSQL
             const respuesta = await fetch(
-                'http://192.168.1.17:3000/api/usuarios',
+                'http://192.168.1.62:3000/api/usuarios',
                 {
                     method: 'POST',
                     headers: {
