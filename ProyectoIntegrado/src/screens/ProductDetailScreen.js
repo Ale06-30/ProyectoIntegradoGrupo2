@@ -1,5 +1,5 @@
 
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -13,13 +13,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CartContext } from '../navigation/CartContext';
 
-const URL_SERVIDOR = 'http://192.168.1.17:3000';
+const URL_SERVIDOR = 'http://192.168.1.90:3000';
 
 export default function ProductDetailScreen({ route, navigation }) {
 
     const { producto } = route.params;
 
     const { agregarAlCarrito } = useContext(CartContext);
+
+    const [productosRecomendados, setProductosRecomendados] = useState([]);
 
     // OBTENER DIRECCION COMPLETA DE LA IMAGEN
     const obtenerUrlImagen = (ruta) => {
@@ -29,6 +31,49 @@ export default function ProductDetailScreen({ route, navigation }) {
             ? ruta
             : `${URL_SERVIDOR}${ruta}`;
     };
+
+    // OBTENER PRODUCTOS DE LA MISMA CATEGORIA
+    useEffect(() => {
+
+        const obtenerRecomendados = async () => {
+
+            try {
+
+                const respuesta = await fetch(
+                    `${URL_SERVIDOR}/api/productos`
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error('No se pudieron obtener los productos.');
+                }
+
+                const productos = await respuesta.json();
+
+                const recomendados = productos
+                    .filter(item =>
+                        item.id !== producto.id &&
+                        item.categoria &&
+                        producto.categoria &&
+                        item.categoria.trim().toLowerCase() ===
+                        producto.categoria.trim().toLowerCase()
+                    )
+                    .slice(0, 4);
+
+                setProductosRecomendados(recomendados);
+
+            } catch (error) {
+
+                console.log(
+                    'Error al obtener productos recomendados:',
+                    error.message
+                );
+
+            }
+        };
+
+        obtenerRecomendados();
+
+    }, [producto.id, producto.categoria]);
 
     const manejarAgregar = () => {
         agregarAlCarrito(producto);
@@ -47,6 +92,13 @@ export default function ProductDetailScreen({ route, navigation }) {
                 }
             ]
         );
+    };
+
+    // ABRIR DETALLE DE OTRO PRODUCTO
+    const abrirProducto = (item) => {
+        navigation.push(route.name, {
+            producto: item
+        });
     };
 
     return (
@@ -113,6 +165,66 @@ export default function ProductDetailScreen({ route, navigation }) {
                     </TouchableOpacity>
 
                 </View>
+
+                {/* PRODUCTOS RECOMENDADOS */}
+                {productosRecomendados.length > 0 && (
+                    <View style={styles.seccionRecomendados}>
+
+                        <Text style={styles.tituloRecomendados}>
+                            Productos recomendados
+                        </Text>
+
+                        <Text style={styles.subtituloRecomendados}>
+                            Más productos de la categoría {producto.categoria}
+                        </Text>
+
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                        >
+                            {productosRecomendados.map((item) => (
+
+                                <TouchableOpacity
+                                    key={item.id}
+                                    style={styles.tarjetaRecomendada}
+                                    onPress={() => abrirProducto(item)}
+                                >
+
+                                    <View style={styles.imagenRecomendada}>
+                                        {obtenerUrlImagen(item.imagen) ? (
+                                            <Image
+                                                source={{
+                                                    uri: obtenerUrlImagen(item.imagen)
+                                                }}
+                                                style={styles.imagenProductoRecomendado}
+                                                resizeMode="contain"
+                                            />
+                                        ) : (
+                                            <Text style={styles.iconoRecomendado}>
+                                                📦
+                                            </Text>
+                                        )}
+                                    </View>
+
+                                    <Text
+                                        style={styles.nombreRecomendado}
+                                        numberOfLines={2}
+                                    >
+                                        {item.nombre}
+                                    </Text>
+
+                                    <Text style={styles.precioRecomendado}>
+                                        Q{Number(item.precio).toFixed(2)}
+                                    </Text>
+
+                                </TouchableOpacity>
+
+                            ))}
+                        </ScrollView>
+
+                    </View>
+                )}
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -203,6 +315,58 @@ const styles = StyleSheet.create({
     },
     textoBoton: {
         color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold'
+    },
+
+    // ESTILOS DE PRODUCTOS RECOMENDADOS
+    seccionRecomendados: {
+        marginTop: 30
+    },
+    tituloRecomendados: {
+        color: '#FFFFFF',
+        fontSize: 21,
+        fontWeight: 'bold',
+        marginBottom: 6
+    },
+    subtituloRecomendados: {
+        color: '#A1A1AA',
+        fontSize: 14,
+        marginBottom: 18
+    },
+    tarjetaRecomendada: {
+        width: 155,
+        backgroundColor: '#17171F',
+        borderRadius: 15,
+        padding: 12,
+        marginRight: 12
+    },
+    imagenRecomendada: {
+        width: '100%',
+        height: 125,
+        backgroundColor: '#252535',
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+        overflow: 'hidden'
+    },
+    imagenProductoRecomendado: {
+        width: '100%',
+        height: '100%'
+    },
+    iconoRecomendado: {
+        fontSize: 45
+    },
+    nombreRecomendado: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        minHeight: 35
+    },
+    precioRecomendado: {
+        color: '#C084FC',
         fontSize: 16,
         fontWeight: 'bold'
     }

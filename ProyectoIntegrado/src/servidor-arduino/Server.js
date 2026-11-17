@@ -82,6 +82,81 @@ app.get('/api/admin/productos', async (req, res) => {
     }
 });
 
+// 3.1. ANALISIS AUTOMATICO DEL INVENTARIO
+app.get('/api/admin/analisis-inventario', async (req, res) => {
+    try {
+        const [productos] = await db.query(`
+            SELECT
+                id,
+                nombre,
+                stock,
+                categoria,
+                estado
+            FROM productos
+            ORDER BY stock ASC
+        `);
+
+        // CLASIFICAR PRODUCTOS SEGUN SU STOCK
+        const agotados = productos.filter(
+            producto => Number(producto.stock) === 0
+        );
+
+        const stockBajo = productos.filter(
+            producto =>
+                Number(producto.stock) > 0 &&
+                Number(producto.stock) <= 3
+        );
+
+        const stockSuficiente = productos.filter(
+            producto => Number(producto.stock) > 3
+        );
+
+        // GENERAR RECOMENDACIONES
+        const recomendaciones = [];
+
+        agotados.forEach(producto => {
+            recomendaciones.push({
+                id: producto.id,
+                producto: producto.nombre,
+                stock: Number(producto.stock),
+                prioridad: 'Alta',
+                recomendacion: 'Producto agotado. Se recomienda reabastecerlo.'
+            });
+        });
+
+        stockBajo.forEach(producto => {
+            recomendaciones.push({
+                id: producto.id,
+                producto: producto.nombre,
+                stock: Number(producto.stock),
+                prioridad: 'Media',
+                recomendacion: 'Quedan pocas unidades. Se recomienda revisar su reabastecimiento.'
+            });
+        });
+
+        // DEVOLVER RESULTADOS
+        res.json({
+            resumen: {
+                totalProductos: productos.length,
+                agotados: agotados.length,
+                stockBajo: stockBajo.length,
+                stockSuficiente: stockSuficiente.length
+            },
+            productosAgotados: agotados,
+            productosStockBajo: stockBajo,
+            productosStockSuficiente: stockSuficiente,
+            recomendaciones
+        });
+
+    } catch (error) {
+        console.log('[ERROR] Al analizar inventario:', error.message);
+
+        res.status(500).json({
+            mensaje: 'Error al generar el análisis del inventario'
+        });
+    }
+});
+
 // 4. HABILITAR O DESHABILITAR PRODUCTO
 app.patch('/api/productos/:id/estado', async (req, res) => {
     try {
@@ -257,6 +332,142 @@ app.post('/api/productos', uploadImagen.single('imagen'), async (req, res) => {
 
         res.status(500).json({
             mensaje: 'Error al registrar el producto'
+        });
+    }
+});
+
+// 6.1. EDITAR PRODUCTO EXISTENTE
+app.patch('/api/productos/:id', uploadImagen.single('imagen'), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        const {
+            nombre,
+            descripcion,
+            precio,
+            stock,
+            categoria
+        } = req.body;
+
+        // VALIDAR ID
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({
+                mensaje: 'ID de producto no válido'
+            });
+        }
+
+        // VALIDAR NOMBRE
+        if (
+            typeof nombre !== 'string' ||
+            !nombre.trim() ||
+            nombre.trim().length > 150
+        ) {
+            return res.status(400).json({
+                mensaje: 'El nombre del producto no es válido'
+            });
+        }
+
+        // VALIDAR PRECIO
+        const precioNumero = Number(precio);
+
+        if (
+            precio === undefined ||
+            precio === null ||
+            precio === '' ||
+            !Number.isFinite(precioNumero) ||
+            precioNumero <= 0 ||
+            precioNumero > 99999999.99
+        ) {
+            return res.status(400).json({
+                mensaje: 'El precio debe ser mayor que cero'
+            });
+        }
+
+        // VALIDAR STOCK
+        const stockNumero = Number(stock);
+
+        if (
+            stock === undefined ||
+            stock === null ||
+            stock === '' ||
+            !Number.isInteger(stockNumero) ||
+            stockNumero < 0
+        ) {
+            return res.status(400).json({
+                mensaje: 'El stock debe ser un número entero igual o mayor que cero'
+            });
+        }
+
+        // VALIDAR DESCRIPCIÓN Y CATEGORÍA
+        if (
+            descripcion !== undefined &&
+            descripcion !== null &&
+            typeof descripcion !== 'string'
+        ) {
+            return res.status(400).json({
+                mensaje: 'La descripción no es válida'
+            });
+        }
+
+        if (
+            categoria !== undefined &&
+            categoria !== null &&
+            typeof categoria !== 'string'
+        ) {
+            return res.status(400).json({
+                mensaje: 'La categoría no es válida'
+            });
+        }
+
+        // COMPROBAR QUE EL PRODUCTO EXISTA
+        const [productos] = await db.query(
+            `SELECT id, imagen FROM productos WHERE id = ?`,
+            [id]
+        );
+
+        if (productos.length === 0) {
+            return res.status(404).json({
+                mensaje: 'No se encontró el producto'
+            });
+        }
+
+        // CONSERVAR IMAGEN ANTERIOR SI NO SE SELECCIONÓ OTRA
+        const imagen = req.file
+            ? `/uploads/productos/${req.file.filename}`
+            : productos[0].imagen;
+
+        // ACTUALIZAR PRODUCTO
+        await db.query(
+            `UPDATE productos
+             SET nombre = ?,
+                 descripcion = ?,
+                 precio = ?,
+                 stock = ?,
+                 categoria = ?,
+                 imagen = ?
+             WHERE id = ?`,
+            [
+                nombre.trim(),
+                descripcion ? descripcion.trim() : null,
+                precioNumero,
+                stockNumero,
+                categoria ? categoria.trim() : null,
+                imagen,
+                id
+            ]
+        );
+
+        console.log('[OK] Producto actualizado. ID:', id);
+
+        res.json({
+            mensaje: 'Producto actualizado correctamente'
+        });
+
+    } catch (error) {
+        console.log('[ERROR] Al editar producto:', error.message);
+
+        res.status(500).json({
+            mensaje: 'Error al actualizar el producto'
         });
     }
 });

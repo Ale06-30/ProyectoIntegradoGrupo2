@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { auth } from '../firebase/FirebaseConfig';
 
-const API_URL = 'http://192.168.1.17:3000/api/pedidos';
+const API_URL = 'http://192.168.1.90:3000/api/pedidos';
 
 const estadosEnvio = [
     {

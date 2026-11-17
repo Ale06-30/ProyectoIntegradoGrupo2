@@ -1,13 +1,11 @@
-// Importamos la función que permite crear una navegación mediante pestañas inferiores.
+
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-// Importamos nuestras pantallas.
 import admin1Screen from '../screens/admin1Screen';
-import admin2Screen from '../screens/admin2Screen';
+import IAadminStackNavigator from './IAadminStackNavigator';
 import admin3Screen from '../screens/admin3Screen';
 import admin4Screen from '../screens/admin4Screen';
 
-// Importamos los iconos.
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -45,10 +43,10 @@ export default function BottomTabNavigator() {
                 }}
             />
 
-            {/* Segunda opción: Inventario */}
+            {/* Segunda opción: Inventario y análisis con IA */}
             <Tab.Screen
                 name="Admin2"
-                component={admin2Screen}
+                component={IAadminStackNavigator}
                 options={{
                     tabBarIcon: ({ focused }) => (
                         <AntDesign

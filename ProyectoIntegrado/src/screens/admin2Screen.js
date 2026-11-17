@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -14,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
 // Direcciones de la API
-const API_BASE_URL = 'http://192.168.1.17:3000';
+const API_BASE_URL = 'http://192.168.1.90:3000';
 const API_URL = `${API_BASE_URL}/api/productos`;
 const API_ADMIN_URL = `${API_BASE_URL}/api/admin/productos`;
 
@@ -25,6 +26,10 @@ export default function admin2Screen({ navigation }) {
     const [error, setError] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [actualizandoId, setActualizandoId] = useState(null);
+
+    // Estado para editar productos
+    const [editandoId, setEditandoId] = useState(null);
+    const [imagenActual, setImagenActual] = useState(null);
 
     // Datos del formulario
     const [nombre, setNombre] = useState('');
@@ -87,7 +92,40 @@ export default function admin2Screen({ navigation }) {
         }
     };
 
-    // Registrar producto en MySQL
+    // Cargar los datos del producto en el formulario
+    const editarProducto = (producto) => {
+        setEditandoId(producto.id);
+
+        setNombre(producto.nombre || '');
+        setDescripcion(producto.descripcion || '');
+        setPrecio(String(producto.precio ?? ''));
+        setStock(String(producto.stock ?? ''));
+        setCategoria(producto.categoria || '');
+
+        setImagen(null);
+
+        setImagenActual(
+            producto.imagen
+                ? producto.imagen.startsWith('http')
+                    ? producto.imagen
+                    : `${API_BASE_URL}${producto.imagen}`
+                : null
+        );
+    };
+
+    // Cancelar edición y limpiar formulario
+    const cancelarEdicion = () => {
+        setEditandoId(null);
+        setNombre('');
+        setDescripcion('');
+        setPrecio('');
+        setStock('');
+        setCategoria('');
+        setImagen(null);
+        setImagenActual(null);
+    };
+
+    // Registrar o actualizar producto en MySQL
     const registrarProducto = async () => {
 
         if (
@@ -136,37 +174,57 @@ export default function admin2Screen({ navigation }) {
                 });
             }
 
-            const respuesta = await fetch(API_URL, {
-                method: 'POST',
-                body: formData
-            });
+            // Determinar si se registra o se edita
+            const estabaEditando = editandoId !== null;
 
-            const resultado = await respuesta.json();
+            const respuesta = await fetch(
+                estabaEditando
+                    ? `${API_URL}/${editandoId}`
+                    : API_URL,
+                {
+                    method: estabaEditando ? 'PATCH' : 'POST',
+                    body: formData
+                }
+            );
+
+            // Leer primero la respuesta como texto
+            const textoRespuesta = await respuesta.text();
+
+            let resultado;
+
+            // Comprobar si el servidor devolvió JSON
+            try {
+                resultado = JSON.parse(textoRespuesta);
+            } catch (error) {
+                console.log('Respuesta del servidor:', textoRespuesta);
+
+                throw new Error(
+                    'El servidor devolvió una respuesta que no es JSON. Revisa la terminal de Node.js.'
+                );
+            }
 
             if (!respuesta.ok) {
                 throw new Error(
-                    resultado.mensaje || 'No se pudo registrar el producto.'
+                    resultado.mensaje ||
+                    'No se pudo guardar el producto.'
                 );
             }
 
             // Limpiar formulario
-            setNombre('');
-            setDescripcion('');
-            setPrecio('');
-            setStock('');
-            setCategoria('');
-            setImagen(null);
+            cancelarEdicion();
 
             // Actualizar inventario
             await obtenerProductos();
 
             Alert.alert(
-                'Producto registrado',
-                'El producto se guardó correctamente.'
+                estabaEditando ? 'Producto actualizado' : 'Producto registrado',
+                estabaEditando
+                    ? 'Los cambios se guardaron correctamente.'
+                    : 'El producto se guardó correctamente.'
             );
 
         } catch (err) {
-            console.log('Error al registrar producto:', err);
+            console.log('Error al guardar producto:', err);
 
             Alert.alert(
                 'Error',
@@ -270,7 +328,9 @@ export default function admin2Screen({ navigation }) {
                 <View style={styles.formCard}>
 
                     <Text style={styles.sectionTitle}>
-                        Registrar nuevo producto
+                        {editandoId
+                            ? 'Editar producto'
+                            : 'Registrar nuevo producto'}
                     </Text>
 
                     <Text style={styles.label}>Nombre del producto</Text>
@@ -333,13 +393,17 @@ export default function admin2Screen({ navigation }) {
                         onPress={seleccionarImagen}
                     >
                         <Text style={styles.imageButtonText}>
-                            {imagen ? 'Cambiar imagen' : 'Seleccionar imagen'}
+                            {imagen || imagenActual
+                                ? 'Cambiar imagen'
+                                : 'Seleccionar imagen'}
                         </Text>
                     </TouchableOpacity>
 
-                    {imagen && (
+                    {(imagen || imagenActual) && (
                         <Image
-                            source={{ uri: imagen.uri }}
+                            source={{
+                                uri: imagen ? imagen.uri : imagenActual
+                            }}
                             style={styles.imagePreview}
                         />
                     )}
@@ -356,10 +420,24 @@ export default function admin2Screen({ navigation }) {
                             <ActivityIndicator color="#FFFFFF" />
                         ) : (
                             <Text style={styles.registerButtonText}>
-                                + Registrar producto
+                                {editandoId
+                                    ? 'Guardar cambios'
+                                    : '+ Registrar producto'}
                             </Text>
                         )}
                     </TouchableOpacity>
+
+                    {editandoId && (
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={cancelarEdicion}
+                            disabled={guardando}
+                        >
+                            <Text style={styles.cancelButtonText}>
+                                Cancelar edición
+                            </Text>
+                        </TouchableOpacity>
+                    )}
 
                 </View>
 
@@ -379,6 +457,26 @@ export default function admin2Screen({ navigation }) {
                         </Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* ANÁLISIS CON IA */}
+                <TouchableOpacity
+                    style={styles.aiButton}
+                    onPress={() => navigation.navigate('AnalisisIA')}
+                >
+                    <Text style={styles.aiIcon}>🤖</Text>
+
+                    <View style={styles.aiInfo}>
+                        <Text style={styles.aiTitle}>
+                            Análisis con IA
+                        </Text>
+
+                        <Text style={styles.aiDescription}>
+                            Obtén recomendaciones inteligentes sobre tu inventario.
+                        </Text>
+                    </View>
+
+                    <Text style={styles.aiArrow}>➜</Text>
+                </TouchableOpacity>
 
                 {cargando ? (
 
@@ -428,9 +526,21 @@ export default function admin2Screen({ navigation }) {
                             >
 
                                 <View style={styles.productIcon}>
-                                    <Text style={styles.packageEmoji}>
-                                        📦
-                                    </Text>
+                                    {producto.imagen ? (
+                                        <Image
+                                            source={{
+                                                uri: producto.imagen.startsWith('http')
+                                                    ? producto.imagen
+                                                    : `${API_BASE_URL}${producto.imagen}`
+                                            }}
+                                            style={styles.imagenProducto}
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <Text style={styles.packageEmoji}>
+                                            📦
+                                        </Text>
+                                    )}
                                 </View>
 
                                 <View style={styles.productInfo}>
@@ -463,6 +573,16 @@ export default function admin2Screen({ navigation }) {
                                             ? '● Producto habilitado'
                                             : '● Producto deshabilitado'}
                                     </Text>
+
+                                    {/* BOTÓN EDITAR */}
+                                    <TouchableOpacity
+                                        style={styles.editButton}
+                                        onPress={() => editarProducto(producto)}
+                                    >
+                                        <Text style={styles.stateButtonText}>
+                                            Editar producto
+                                        </Text>
+                                    </TouchableOpacity>
 
                                     <TouchableOpacity
                                         style={[
@@ -616,6 +736,21 @@ const styles = StyleSheet.create({
         fontSize: 15
     },
 
+    // NUEVO ESTILO: BOTÓN CANCELAR EDICIÓN
+    cancelButton: {
+        backgroundColor: '#3F3F46',
+        padding: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: 10
+    },
+
+    cancelButtonText: {
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+        fontSize: 14
+    },
+
     inventoryHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -633,6 +768,46 @@ const styles = StyleSheet.create({
 
     refreshText: {
         color: '#A78BFA',
+        fontWeight: 'bold'
+    },
+
+    // ESTILOS DEL BOTÓN DE ANÁLISIS CON IA
+    aiButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#18181B',
+        marginHorizontal: 18,
+        marginBottom: 20,
+        padding: 17,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: '#7C3AED'
+    },
+
+    aiIcon: {
+        fontSize: 30,
+        marginRight: 14
+    },
+
+    aiInfo: {
+        flex: 1
+    },
+
+    aiTitle: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 5
+    },
+
+    aiDescription: {
+        color: '#A1A1AA',
+        fontSize: 12
+    },
+
+    aiArrow: {
+        color: '#A78BFA',
+        fontSize: 22,
         fontWeight: 'bold'
     },
 
@@ -692,6 +867,12 @@ const styles = StyleSheet.create({
         marginRight: 15
     },
 
+    imagenProducto: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 15
+    },
+
     packageEmoji: {
         fontSize: 35
     },
@@ -740,6 +921,15 @@ const styles = StyleSheet.create({
     },
 
     stateButton: {
+        padding: 12,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginTop: 12
+    },
+
+    // NUEVO ESTILO: BOTÓN EDITAR
+    editButton: {
+        backgroundColor: '#7C3AED',
         padding: 12,
         borderRadius: 10,
         alignItems: 'center',

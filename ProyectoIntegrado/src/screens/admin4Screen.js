@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import io from 'socket.io-client';
 
-const API_URL = 'http://192.168.1.17:3000/api/pedidos';
-const SOCKET_URL = 'http://192.168.1.17:3000';
+const API_URL = 'http://192.168.1.90:3000/api/pedidos';
+const SOCKET_URL = 'http://192.168.1.90:3000';
 
 export default function admin4Screen({ navigation }) {
     const [filtro, setFiltro] = useState('Todos');

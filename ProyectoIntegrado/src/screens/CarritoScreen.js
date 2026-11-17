@@ -6,14 +6,23 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    Alert
+    Alert,
+    Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CartContext } from '../navigation/CartContext';
 import { auth } from '../firebase/FirebaseConfig';
 
-const API_URL = 'http://192.168.1.17:3000';
+const API_URL = 'http://192.168.1.90:3000';
+
+const obtenerUrlImagen = (imagen) => {
+    if (!imagen) return null;
+
+    return imagen.startsWith('http')
+        ? imagen
+        : `${API_URL}${imagen}`;
+};
 
 export default function CarritoScreen({ navigation }) {
 
@@ -156,7 +165,17 @@ export default function CarritoScreen({ navigation }) {
                                 >
 
                                     <View style={styles.imagen}>
-                                        <Text style={styles.icono}>📦</Text>
+                                        {producto.imagen ? (
+                                            <Image
+                                                source={{
+                                                    uri: obtenerUrlImagen(producto.imagen)
+                                                }}
+                                                style={styles.imagenProducto}
+                                                resizeMode="cover"
+                                            />
+                                        ) : (
+                                            <Text style={styles.icono}>📦</Text>
+                                        )}
                                     </View>
 
                                     <View style={styles.informacion}>
@@ -358,6 +377,12 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center'
+    },
+
+    imagenProducto: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 10
     },
 
     icono: {
