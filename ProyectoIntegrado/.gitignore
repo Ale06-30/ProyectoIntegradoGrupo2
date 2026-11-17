@@ -41,3 +41,7 @@ yarn-error.*
 /android
 
 .env
+
+# Imágenes subidas por los usuarios
+src/servidor-arduino/uploads/*
+!src/servidor-arduino/uploads/.gitkeep

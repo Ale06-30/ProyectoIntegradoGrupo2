@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -8,12 +7,14 @@ import {
     TouchableOpacity,
     TextInput,
     ActivityIndicator,
-    Alert
+    Alert,
+    Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 // Direcciones de la API
-const API_BASE_URL = 'http://192.168.1.62:3000';
+const API_BASE_URL = 'http://192.168.1.17:3000';
 const API_URL = `${API_BASE_URL}/api/productos`;
 const API_ADMIN_URL = `${API_BASE_URL}/api/admin/productos`;
 
@@ -31,6 +32,7 @@ export default function admin2Screen({ navigation }) {
     const [precio, setPrecio] = useState('');
     const [stock, setStock] = useState('');
     const [categoria, setCategoria] = useState('');
+    const [imagen, setImagen] = useState(null);
 
     // Comprobar si un producto está habilitado
     const productoHabilitado = (estado) => {
@@ -63,6 +65,27 @@ export default function admin2Screen({ navigation }) {
     useEffect(() => {
         obtenerProductos();
     }, []);
+
+    // Seleccionar imagen desde la galería
+    const seleccionarImagen = async () => {
+        const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permiso.granted) {
+            Alert.alert('Permiso necesario', 'Permite el acceso a la galería para seleccionar una imagen.');
+            return;
+        }
+
+        const resultado = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8
+        });
+
+        if (!resultado.canceled) {
+            setImagen(resultado.assets[0]);
+        }
+    };
 
     // Registrar producto en MySQL
     const registrarProducto = async () => {
@@ -98,18 +121,24 @@ export default function admin2Screen({ navigation }) {
         try {
             setGuardando(true);
 
+            const formData = new FormData();
+            formData.append('nombre', nombre.trim());
+            formData.append('descripcion', descripcion.trim());
+            formData.append('precio', String(precioNumero));
+            formData.append('stock', String(stockNumero));
+            formData.append('categoria', categoria.trim());
+
+            if (imagen) {
+                formData.append('imagen', {
+                    uri: imagen.uri,
+                    name: imagen.fileName || `producto_${Date.now()}.jpg`,
+                    type: imagen.mimeType || 'image/jpeg'
+                });
+            }
+
             const respuesta = await fetch(API_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    nombre: nombre.trim(),
-                    descripcion: descripcion.trim(),
-                    precio: precioNumero,
-                    stock: stockNumero,
-                    categoria: categoria.trim()
-                })
+                body: formData
             });
 
             const resultado = await respuesta.json();
@@ -126,6 +155,7 @@ export default function admin2Screen({ navigation }) {
             setPrecio('');
             setStock('');
             setCategoria('');
+            setImagen(null);
 
             // Actualizar inventario
             await obtenerProductos();
@@ -228,7 +258,7 @@ export default function admin2Screen({ navigation }) {
                     <Text style={styles.headerIcon}>📦</Text>
 
                     <Text style={styles.headerTitle}>
-                        RoboArm
+                        Almax
                     </Text>
 
                     <Text style={styles.headerSubtitle}>
@@ -247,7 +277,7 @@ export default function admin2Screen({ navigation }) {
 
                     <TextInput
                         style={styles.input}
-                        placeholder="Ej. Mystery Box Premium"
+                        placeholder="Ej. Platanos"
                         placeholderTextColor="#71717A"
                         value={nombre}
                         onChangeText={setNombre}
@@ -290,11 +320,29 @@ export default function admin2Screen({ navigation }) {
 
                     <TextInput
                         style={styles.input}
-                        placeholder="Ej. Mystery Box"
+                        placeholder="Ej. Frutas"
                         placeholderTextColor="#71717A"
                         value={categoria}
                         onChangeText={setCategoria}
                     />
+
+                    <Text style={styles.label}>Imagen del producto</Text>
+
+                    <TouchableOpacity
+                        style={styles.imageButton}
+                        onPress={seleccionarImagen}
+                    >
+                        <Text style={styles.imageButtonText}>
+                            {imagen ? 'Cambiar imagen' : 'Seleccionar imagen'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {imagen && (
+                        <Image
+                            source={{ uri: imagen.uri }}
+                            style={styles.imagePreview}
+                        />
+                    )}
 
                     <TouchableOpacity
                         style={[
@@ -527,6 +575,27 @@ const styles = StyleSheet.create({
     descriptionInput: {
         height: 85,
         textAlignVertical: 'top'
+    },
+
+    imageButton: {
+        backgroundColor: '#27272A',
+        padding: 13,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginBottom: 12
+    },
+
+    imageButtonText: {
+        color: '#A78BFA',
+        fontWeight: 'bold'
+    },
+
+    imagePreview: {
+        width: 140,
+        height: 140,
+        borderRadius: 12,
+        alignSelf: 'center',
+        marginBottom: 17
     },
 
     registerButton: {

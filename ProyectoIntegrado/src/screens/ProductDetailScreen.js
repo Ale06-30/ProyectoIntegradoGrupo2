@@ -6,17 +6,29 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    Alert
+    Alert,
+    Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CartContext } from '../navigation/CartContext';
+
+const URL_SERVIDOR = 'http://192.168.1.17:3000';
 
 export default function ProductDetailScreen({ route, navigation }) {
 
     const { producto } = route.params;
 
     const { agregarAlCarrito } = useContext(CartContext);
+
+    // OBTENER DIRECCION COMPLETA DE LA IMAGEN
+    const obtenerUrlImagen = (ruta) => {
+        if (!ruta) return null;
+
+        return ruta.startsWith('http')
+            ? ruta
+            : `${URL_SERVIDOR}${ruta}`;
+    };
 
     const manejarAgregar = () => {
         agregarAlCarrito(producto);
@@ -51,7 +63,17 @@ export default function ProductDetailScreen({ route, navigation }) {
                 <View style={styles.tarjeta}>
 
                     <View style={styles.imagen}>
-                        <Text style={styles.icono}>📦</Text>
+                        {obtenerUrlImagen(producto.imagen) ? (
+                            <Image
+                                source={{
+                                    uri: obtenerUrlImagen(producto.imagen)
+                                }}
+                                style={styles.imagenProducto}
+                                resizeMode="contain"
+                            />
+                        ) : (
+                            <Text style={styles.icono}>📦</Text>
+                        )}
                     </View>
 
                     <Text style={styles.nombre}>{producto.nombre}</Text>
@@ -126,7 +148,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#252535',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20
+        marginBottom: 20,
+        overflow: 'hidden'
+    },
+    imagenProducto: {
+        width: '100%',
+        height: '100%'
     },
     icono: {
         fontSize: 75

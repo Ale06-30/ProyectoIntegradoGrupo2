@@ -10,8 +10,10 @@ import {
     Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import io from 'socket.io-client';
 
-const API_URL = 'http://192.168.1.62:3000/api/pedidos';
+const API_URL = 'http://192.168.1.17:3000/api/pedidos';
+const SOCKET_URL = 'http://192.168.1.17:3000';
 
 export default function admin4Screen({ navigation }) {
     const [filtro, setFiltro] = useState('Todos');
@@ -20,10 +22,14 @@ export default function admin4Screen({ navigation }) {
     const [actualizando, setActualizando] = useState(false);
     const [error, setError] = useState('');
 
+    const [socket, setSocket] = useState(null);
+    const [pedidoEnProceso, setPedidoEnProceso] = useState(null);
+    const [solicitandoPedido, setSolicitandoPedido] = useState(false);
+
     const filtros = [
         'Todos',
         'Pendiente',
-        'En preparación',
+        'En preparacion',
         'Enviado',
         'Entregado',
         'Cancelado'
@@ -64,10 +70,99 @@ export default function admin4Screen({ navigation }) {
         }
     }, []);
 
+    // RECUPERAR EL PEDIDO QUE SIGUE EN PROCESO
+    const consultarPedidoActivo = useCallback(async () => {
+        try {
+            const respuesta = await fetch(`${API_URL}/activo`);
+
+            if (!respuesta.ok) {
+                throw new Error('No se pudo consultar el pedido activo');
+            }
+
+            const datos = await respuesta.json();
+
+            setPedidoEnProceso(datos.activo ? datos.id : null);
+            setSolicitandoPedido(datos.autorizando === true);
+
+            console.log(
+                '[OK] Estado del pedido activo:',
+                datos
+            );
+
+        } catch (err) {
+            console.log(
+                '[ERROR] Al recuperar pedido activo:',
+                err.message
+            );
+        }
+    }, []);
+
     // CARGAR AL ABRIR LA PANTALLA
     useEffect(() => {
         cargarPedidos();
-    }, [cargarPedidos]);
+        consultarPedidoActivo();
+    }, [cargarPedidos, consultarPedidoActivo]);
+
+    // CONEXIÓN CON NODE.JS
+    useEffect(() => {
+        const nuevaConexion = io(SOCKET_URL);
+
+        setSocket(nuevaConexion);
+
+        nuevaConexion.on('connect', () => {
+            console.log('[OK] Conectado con Node.js');
+
+            // RECUPERAR PEDIDO ACTIVO AL CONECTARSE
+            consultarPedidoActivo();
+        });
+
+        nuevaConexion.on('connect_error', (err) => {
+            console.log('[ERROR] Socket:', err.message);
+        });
+
+        // RESPUESTA AL SOLICITAR UN PEDIDO
+        nuevaConexion.on('pedido_procesamiento', (datos) => {
+            setSolicitandoPedido(false);
+
+            if (datos.exitoso) {
+                setPedidoEnProceso(datos.id);
+
+                Alert.alert(
+                    'Pedido autorizado',
+                    datos.mensaje
+                );
+
+                cargarPedidos(true);
+            } else {
+                Alert.alert(
+                    'No se pudo procesar',
+                    datos.mensaje
+                );
+
+                consultarPedidoActivo();
+            }
+        });
+
+        // ACTUALIZACIÓN AUTOMÁTICA DEL ESTADO
+        nuevaConexion.on('pedido_estado_actualizado', (datos) => {
+            setPedidos(pedidosActuales =>
+                pedidosActuales.map(pedido =>
+                    pedido.id === datos.id
+                        ? { ...pedido, estado: datos.estado }
+                        : pedido
+                )
+            );
+
+            if (datos.estado === 'Enviado') {
+                setPedidoEnProceso(null);
+                setSolicitandoPedido(false);
+            }
+        });
+
+        return () => {
+            nuevaConexion.disconnect();
+        };
+    }, [cargarPedidos, consultarPedidoActivo]);
 
     // ACTUALIZAR ESTADO DEL PEDIDO
     const actualizarEstado = (pedido, nuevoEstado) => {
@@ -126,6 +221,46 @@ export default function admin4Screen({ navigation }) {
         );
     };
 
+    // SOLICITAR PROCESAMIENTO DEL PEDIDO
+    const procesarPedido = (pedido) => {
+        if (!socket || !socket.connected) {
+            Alert.alert(
+                'Sin conexión',
+                'No hay conexión con el servidor.'
+            );
+            return;
+        }
+
+        if (solicitandoPedido || pedidoEnProceso !== null) {
+            Alert.alert(
+                'Banda ocupada',
+                'Ya existe un pedido en proceso.'
+            );
+            return;
+        }
+
+        Alert.alert(
+            'Procesar pedido',
+            `¿Deseas enviar el pedido #${pedido.id} a la banda?`,
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel'
+                },
+                {
+                    text: 'Confirmar',
+                    onPress: () => {
+                        setSolicitandoPedido(true);
+
+                        socket.emit('procesar_pedido', {
+                            id: pedido.id
+                        });
+                    }
+                }
+            ]
+        );
+    };
+
     // CONTAR PEDIDOS POR ESTADO
     const contarEstado = (estado) => {
         return pedidos.filter(
@@ -161,7 +296,7 @@ export default function admin4Screen({ navigation }) {
                 {/* ENCABEZADO */}
                 <View style={styles.header}>
                     <Text style={styles.headerIcon}>🛍️</Text>
-                    <Text style={styles.headerTitle}>RoboArm</Text>
+                    <Text style={styles.headerTitle}>Almax</Text>
                     <Text style={styles.headerSubtitle}>
                         Gestión de pedidos
                     </Text>
@@ -180,7 +315,7 @@ export default function admin4Screen({ navigation }) {
 
                     <View style={styles.resumenCard}>
                         <Text style={styles.resumenNumero}>
-                            {contarEstado('En preparación')}
+                            {contarEstado('En preparacion')}
                         </Text>
                         <Text style={styles.resumenTexto}>
                             En preparación
@@ -205,7 +340,10 @@ export default function admin4Screen({ navigation }) {
 
                     <TouchableOpacity
                         style={styles.actualizarButton}
-                        onPress={() => cargarPedidos(true)}
+                        onPress={() => {
+                            cargarPedidos(true);
+                            consultarPedidoActivo();
+                        }}
                         disabled={actualizando}
                     >
                         <Text style={styles.actualizarTexto}>
@@ -371,6 +509,35 @@ export default function admin4Screen({ navigation }) {
                                     Q{Number(pedido.total).toFixed(2)}
                                 </Text>
                             </View>
+
+                            {/* PROCESAR PEDIDO */}
+                            {pedido.estado === 'Pendiente' && (
+                                <>
+                                    <View style={styles.separador} />
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.botonProcesar,
+                                            (pedidoEnProceso !== null ||
+                                                solicitandoPedido) &&
+                                                styles.botonProcesarDesactivado
+                                        ]}
+                                        onPress={() => procesarPedido(pedido)}
+                                        disabled={
+                                            pedidoEnProceso !== null ||
+                                            solicitandoPedido
+                                        }
+                                    >
+                                        <Text style={styles.textoBotonProcesar}>
+                                            {solicitandoPedido
+                                                ? 'Autorizando...'
+                                                : pedidoEnProceso !== null
+                                                    ? 'Banda ocupada'
+                                                    : '▶ Procesar pedido'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
 
                             {/* BOTONES PARA ACTUALIZAR ESTADO */}
                             {pedido.estado !== 'Entregado' &&
@@ -689,7 +856,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold'
     },
 
-    // NUEVOS ESTILOS PARA GESTIONAR PEDIDOS
     botonesEstado: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -716,6 +882,26 @@ const styles = StyleSheet.create({
     textoBotonEstado: {
         color: '#FFFFFF',
         fontSize: 12,
+        fontWeight: 'bold'
+    },
+
+    // BOTON PARA PROCESAR PEDIDOS
+    botonProcesar: {
+        backgroundColor: '#7C3AED',
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginTop: 10
+    },
+
+    botonProcesarDesactivado: {
+        backgroundColor: '#3F3F46',
+        opacity: 0.7
+    },
+
+    textoBotonProcesar: {
+        color: '#FFFFFF',
+        fontSize: 14,
         fontWeight: 'bold'
     }
 });

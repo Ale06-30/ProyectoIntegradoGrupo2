@@ -87,7 +87,7 @@ export default function RegisterScreen({ navigation }) {
                     </View>
 
                     <Text style={styles.title}>
-                        RoboArm
+                        Almax
                     </Text>
 
                     <Text style={styles.subtitle}>

@@ -117,10 +117,10 @@ export default function LoginScreen({ navigation }) {
                         />
                     </View>
 
-                    <Text style={styles.title}>RoboArm</Text>
+                    <Text style={styles.title}>Almax</Text>
 
                     <Text style={styles.subtitle}>
-                        Control y Mystery Boxes
+                        Control y Almacen
                     </Text>
                 </View>
 

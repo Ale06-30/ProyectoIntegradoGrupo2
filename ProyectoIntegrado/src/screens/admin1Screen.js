@@ -14,7 +14,7 @@ export default function admin1Screen({ navigation }) {
           
           {/* Cabecera minimalista */}
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>RoboArm</Text>
+            <Text style={styles.title}>Almax</Text>
             <Text style={styles.subtitle}>Control de Garra y Articulaciones</Text>
           </View>
 

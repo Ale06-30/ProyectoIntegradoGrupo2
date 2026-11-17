@@ -6,6 +6,9 @@ const { Server } = require('socket.io');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const db = require('./config-sql/db');
 
 // 2. CREAR SERVIDOR
@@ -15,6 +18,41 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(cors());
 app.use(express.json());
+
+// Configurar almacenamiento de imágenes de productos
+const carpetaImagenes = path.join(__dirname, 'uploads', 'productos');
+fs.mkdirSync(carpetaImagenes, { recursive: true });
+
+const almacenamientoImagenes = multer.diskStorage({
+    destination: (req, file, callback) => {
+        callback(null, carpetaImagenes);
+    },
+    filename: (req, file, callback) => {
+        const extensiones = {
+            'image/jpeg': '.jpg',
+            'image/png': '.png',
+            'image/webp': '.webp'
+        };
+        callback(null, `producto_${Date.now()}_${Math.round(Math.random() * 1E9)}${extensiones[file.mimetype]}`);
+    }
+});
+
+const uploadImagen = multer({
+    storage: almacenamientoImagenes,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, callback) => {
+        const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+
+        if (tiposPermitidos.includes(file.mimetype)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Solo se permiten imágenes JPG, PNG o WEBP.'));
+        }
+    }
+});
+
+// Permitir que la aplicación consulte las imágenes guardadas
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 3. CONSULTAR TODOS LOS PRODUCTOS PARA ADMINISTRACION
 app.get('/api/admin/productos', async (req, res) => {
@@ -27,6 +65,7 @@ app.get('/api/admin/productos', async (req, res) => {
                 precio,
                 stock,
                 categoria,
+                imagen,
                 estado
             FROM productos
             ORDER BY fecha_registro DESC
@@ -101,7 +140,8 @@ app.get('/api/productos', async (req, res) => {
                 descripcion,
                 precio,
                 stock,
-                categoria
+                categoria,
+                imagen
             FROM productos
             WHERE estado = TRUE
             ORDER BY fecha_registro DESC
@@ -119,7 +159,7 @@ app.get('/api/productos', async (req, res) => {
 });
 
 // 6. REGISTRAR NUEVO PRODUCTO
-app.post('/api/productos', async (req, res) => {
+app.post('/api/productos', uploadImagen.single('imagen'), async (req, res) => {
     try {
         const {
             nombre,
@@ -187,16 +227,21 @@ app.post('/api/productos', async (req, res) => {
             });
         }
 
+        const imagen = req.file
+            ? `/uploads/productos/${req.file.filename}`
+            : null;
+
         const [resultado] = await db.query(
             `INSERT INTO productos
-            (nombre, descripcion, precio, stock, categoria)
-            VALUES (?, ?, ?, ?, ?)`,
+            (nombre, descripcion, precio, stock, categoria, imagen)
+            VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 nombre.trim(),
                 descripcion ? descripcion.trim() : null,
                 precioNumero,
                 stockNumero,
-                categoria ? categoria.trim() : null
+                categoria ? categoria.trim() : null,
+                imagen
             ]
         );
 
@@ -543,6 +588,13 @@ app.patch('/api/pedidos/:id/estado', async (req, res) => {
             });
         }
 
+        // Evitar modificar manualmente un pedido que está en la banda
+        if (pedidoEnProceso === id) {
+            return res.status(409).json({
+                mensaje: 'El pedido está siendo procesado por Arduino'
+            });
+        }
+
         const [pedidos] = await db.query(
             `SELECT id FROM pedidos WHERE id = ?`,
             [id]
@@ -575,7 +627,7 @@ app.patch('/api/pedidos/:id/estado', async (req, res) => {
 });
 
 // 11. CONFIGURAR PUERTO SERIAL
-const PUERTO_ARDUINO = 'COM3';
+const PUERTO_ARDUINO = 'COM4';
 
 let serialPort;
 
@@ -591,8 +643,22 @@ try {
     console.log('[ERROR] Error al conectar:', error.message);
 }
 
-// 12. ESTADO DEL SENSOR
+// 12. ESTADO DEL SENSOR Y AUTORIZACION DE PEDIDOS
 let sensorValue = 0;
+
+let pedidoEnProceso = null;
+let etapaPedido = null;
+let autorizacionEnCurso = false;
+
+// CONSULTAR SI EXISTE UN PEDIDO EN PROCESO
+app.get('/api/pedidos/activo', (req, res) => {
+    res.json({
+        activo: pedidoEnProceso !== null,
+        id: pedidoEnProceso,
+        etapa: etapaPedido,
+        autorizando: autorizacionEnCurso
+    });
+});
 
 // 13. LEER DATOS DEL ARDUINO
 if (serialPort) {
@@ -600,13 +666,131 @@ if (serialPort) {
         new ReadlineParser({ delimiter: '\n' })
     );
 
-    parser.on('data', (line) => {
-        console.log('[ARDUINO]', line);
+    // COLA PARA PROCESAR LOS MENSAJES EN ORDEN
+    let colaMensajesArduino = Promise.resolve();
 
-        if (line.startsWith('SENSOR:')) {
-            sensorValue = parseInt(line.split(':')[1]) || 0;
+    const procesarMensajeArduino = async (line) => {
+        const mensaje = line.trim();
+
+        console.log('[ARDUINO]', mensaje);
+
+        // DATOS DEL SENSOR EXISTENTE
+        if (mensaje.startsWith('SENSOR:')) {
+            sensorValue = parseInt(mensaje.split(':')[1]) || 0;
             io.emit('sensor_data', { value: sensorValue });
+            return;
         }
+
+        // SENSOR 1: CAJA DETECTADA (PREPARACION)
+        if (mensaje === 'BOX_P') {
+
+            if (!pedidoEnProceso || etapaPedido !== 'autorizado') {
+                console.log('[WARN] BOX_P ignorado: no hay pedido autorizado');
+                return;
+            }
+
+            const pedidoId = pedidoEnProceso;
+            etapaPedido = 'actualizando_preparacion';
+
+            try {
+                const [resultado] = await db.query(
+                    `UPDATE pedidos
+                     SET estado = 'En preparacion'
+                     WHERE id = ? AND estado = 'Pendiente'`,
+                    [pedidoId]
+                );
+
+                if (resultado.affectedRows !== 1) {
+                    console.log('[WARN] No se pudo actualizar el pedido:', pedidoId);
+
+                    etapaPedido = 'autorizado';
+                    return;
+                }
+
+                etapaPedido = 'preparacion';
+
+                console.log('[OK] Pedido en preparación:', pedidoId);
+
+                io.emit('pedido_estado_actualizado', {
+                    id: pedidoId,
+                    estado: 'En preparacion'
+                });
+
+            } catch (error) {
+                console.log('[ERROR] Al actualizar preparación:', error.message);
+
+                etapaPedido = 'autorizado';
+            }
+
+            return;
+        }
+
+        // SENSOR 2: CAJA ENVIADA
+        if (mensaje === 'BOX_E') {
+
+            if (!pedidoEnProceso || etapaPedido !== 'preparacion') {
+                console.log('[WARN] BOX_E ignorado: no hay pedido en preparación');
+                return;
+            }
+
+            const pedidoId = pedidoEnProceso;
+            etapaPedido = 'actualizando_enviado';
+
+            try {
+                const [resultado] = await db.query(
+                    `UPDATE pedidos
+                     SET estado = 'Enviado'
+                     WHERE id = ? AND estado = 'En preparacion'`,
+                    [pedidoId]
+                );
+
+                if (resultado.affectedRows !== 1) {
+                    console.log('[WARN] No se pudo actualizar el envío:', pedidoId);
+
+                    etapaPedido = 'preparacion';
+                    return;
+                }
+
+                console.log('[OK] Pedido enviado:', pedidoId);
+
+                io.emit('pedido_estado_actualizado', {
+                    id: pedidoId,
+                    estado: 'Enviado'
+                });
+
+                // FINALIZAR AUTORIZACION
+                pedidoEnProceso = null;
+                etapaPedido = null;
+
+                if (serialPort && serialPort.isOpen) {
+                    serialPort.write('PEDIDO_FIN\n', (error) => {
+                        if (error) {
+                            console.log('[ERROR] Al finalizar pedido en Arduino:', error.message);
+                        } else {
+                            console.log('[SEND] PEDIDO_FIN');
+                        }
+                    });
+                }
+
+                console.log('[OK] Autorización liberada');
+
+            } catch (error) {
+                console.log('[ERROR] Al actualizar envío:', error.message);
+
+                etapaPedido = 'preparacion';
+            }
+
+            return;
+        }
+    };
+
+    // CADA MENSAJE ESPERA A QUE TERMINE EL ANTERIOR
+    parser.on('data', (line) => {
+        colaMensajesArduino = colaMensajesArduino
+            .then(() => procesarMensajeArduino(line))
+            .catch((error) => {
+                console.log('[ERROR] Al procesar mensaje Arduino:', error.message);
+            });
     });
 
     serialPort.on('error', (error) => {
@@ -623,6 +807,100 @@ io.on('connection', (socket) => {
     console.log('[APP] App conectada');
 
     socket.emit('sensor_data', { value: sensorValue });
+
+    // AUTORIZAR PROCESAMIENTO DE UN PEDIDO
+    socket.on('procesar_pedido', async (data) => {
+
+        if (autorizacionEnCurso || pedidoEnProceso !== null) {
+            socket.emit('pedido_procesamiento', {
+                exitoso: false,
+                mensaje: 'Ya existe un pedido en proceso'
+            });
+            return;
+        }
+
+        const pedidoId = Number(data?.id);
+
+        if (!Number.isInteger(pedidoId) || pedidoId <= 0) {
+            socket.emit('pedido_procesamiento', {
+                exitoso: false,
+                mensaje: 'ID de pedido no válido'
+            });
+            return;
+        }
+
+        if (!serialPort || !serialPort.isOpen) {
+            socket.emit('pedido_procesamiento', {
+                exitoso: false,
+                mensaje: 'Arduino no está conectado'
+            });
+            return;
+        }
+
+        autorizacionEnCurso = true;
+
+        try {
+            const [pedidos] = await db.query(
+                `SELECT id, estado
+                 FROM pedidos
+                 WHERE id = ?`,
+                [pedidoId]
+            );
+
+            if (pedidos.length === 0) {
+                socket.emit('pedido_procesamiento', {
+                    exitoso: false,
+                    mensaje: 'No se encontró el pedido'
+                });
+                return;
+            }
+
+            if (pedidos[0].estado !== 'Pendiente') {
+                socket.emit('pedido_procesamiento', {
+                    exitoso: false,
+                    mensaje: 'El pedido no está pendiente'
+                });
+                return;
+            }
+
+            // AUTORIZAR PEDIDO
+            pedidoEnProceso = pedidoId;
+            etapaPedido = 'autorizado';
+
+            // Esperar confirmación de escritura serial
+            await new Promise((resolve, reject) => {
+                serialPort.write(`PEDIDO_${pedidoId}\n`, (error) => {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+
+            console.log('[OK] Pedido autorizado:', pedidoId);
+
+            socket.emit('pedido_procesamiento', {
+                exitoso: true,
+                id: pedidoId,
+                mensaje: 'Pedido autorizado correctamente'
+            });
+
+        } catch (error) {
+            console.log('[ERROR] Al autorizar pedido:', error.message);
+
+            pedidoEnProceso = null;
+            etapaPedido = null;
+
+            socket.emit('pedido_procesamiento', {
+                exitoso: false,
+                mensaje: 'Error al autorizar el pedido'
+            });
+
+        } finally {
+            autorizacionEnCurso = false;
+        }
+    });
 
     // CONTROL DEL SERVO
     socket.on('command_servo', (data) => {

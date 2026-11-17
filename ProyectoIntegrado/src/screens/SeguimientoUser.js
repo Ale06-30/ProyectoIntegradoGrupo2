@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { auth } from '../firebase/FirebaseConfig';
 
-const API_URL = 'http://192.168.1.62:3000/api/pedidos';
+const API_URL = 'http://192.168.1.17:3000/api/pedidos';
 
 const estadosEnvio = [
     {
@@ -28,8 +28,8 @@ const estadosEnvio = [
     },
     {
         estado: 'En preparación',
-        titulo: 'Preparando Mystery Box',
-        descripcion: 'Tu caja sorpresa está siendo preparada.',
+        titulo: 'Preparando tu Pedido',
+        descripcion: 'Tu pedido está siendo preparado.',
         icono: 'inventory-2'
     },
     {
@@ -41,7 +41,7 @@ const estadosEnvio = [
     {
         estado: 'Entregado',
         titulo: 'Entregado con éxito',
-        descripcion: 'Tu Mystery Box ha sido entregada. ¡Disfruta la experiencia!',
+        descripcion: 'Tu pedido ha sido entregado. ¡Gracias por escogernos!',
         icono: 'check-circle'
     }
 ];
@@ -271,7 +271,7 @@ export default function SeguimientoUser() {
                         </Text>
 
                         <Text style={styles.subtitle}>
-                            📦 Estado de tus Mystery Box
+                            📦 Estado de tus Pedidos
                         </Text>
 
                     </View>
@@ -335,7 +335,7 @@ export default function SeguimientoUser() {
 
                             <Text style={styles.emptyText}>
                                 Cuando realices una compra, podrás consultar
-                                aquí el progreso de tu Mystery Box.
+                                aquí el progreso de tu pedido.
                             </Text>
 
                         </View>

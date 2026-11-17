@@ -6,19 +6,30 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    ActivityIndicator
+    ActivityIndicator,
+    Image
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Agregar su propia IP en esta parte
-const URL_API = 'http://192.168.1.62:3000/api/productos';
+const URL_API = 'http://192.168.1.17:3000/api/productos';
+const URL_SERVIDOR = 'http://192.168.1.17:3000';
 
 export default function ProductosUser({ navigation }) {
 
     const [productos, setProductos] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(false);
+
+    // OBTENER DIRECCION COMPLETA DE LA IMAGEN
+    const obtenerUrlImagen = (ruta) => {
+        if (!ruta) return null;
+
+        return ruta.startsWith('http')
+            ? ruta
+            : `${URL_SERVIDOR}${ruta}`;
+    };
 
     // CONSULTAR PRODUCTOS DESDE MYSQL
     const cargarProductos = async () => {
@@ -74,10 +85,10 @@ export default function ProductosUser({ navigation }) {
                             <Text style={styles.iconoCarrito}>🛒</Text>
                         </TouchableOpacity>
 
-                        <Text style={styles.title}>Mystery Box</Text>
+                        <Text style={styles.title}>Almax</Text>
 
                         <Text style={styles.subtitle}>
-                            Descubre lo inesperado
+                            Bienvenido a nuestra aplicación
                         </Text>
 
                         <View style={styles.decoracion} />
@@ -87,11 +98,11 @@ export default function ProductosUser({ navigation }) {
                     <View style={styles.catalogoHeader}>
                         <View>
                             <Text style={styles.sectionTitle}>
-                                Nuestras Mystery Box
+                                Nuestros Productos
                             </Text>
 
                             <Text style={styles.sectionSubtitle}>
-                                Encuentra tu próxima sorpresa
+                                Encuentra tu próxima compra
                             </Text>
                         </View>
 
@@ -146,15 +157,24 @@ export default function ProductosUser({ navigation }) {
                                     style={styles.productCard}
                                 >
 
-                                    {/* ESPACIO PARA LA IMAGEN */}
+                                    {/* IMAGEN DEL PRODUCTO */}
                                     <View style={styles.imageContainer}>
-                                        <Text style={styles.boxEmoji}>
-                                            📦
-                                        </Text>
+                                        {obtenerUrlImagen(producto.imagen) ? (
+                                            <Image
+                                                source={{
+                                                    uri: obtenerUrlImagen(producto.imagen)
+                                                }}
+                                                style={styles.productImage}
+                                                resizeMode="contain"
+                                            />
+                                        ) : (
+                                            <>
+                                                <Text style={styles.boxEmoji}>
+                                                    📦
+                                                </Text>
 
-                                        <Text style={styles.imageText}>
-                                            MYSTERY BOX
-                                        </Text>
+                                            </>
+                                        )}
                                     </View>
 
                                     {/* INFORMACION */}
@@ -191,11 +211,11 @@ export default function ProductosUser({ navigation }) {
                     {/* PIE DE PAGINA */}
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>
-                            MYSTERY BOX
+                            Almax
                         </Text>
 
                         <Text style={styles.footerSubtitle}>
-                            Cada caja es una nueva sorpresa.
+                            Todo lo que necesitas en un solo lugar.
                         </Text>
                     </View>
 
@@ -330,6 +350,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         borderWidth: 1,
         borderColor: '#392653',
+        overflow: 'hidden',
+    },
+
+    productImage: {
+        width: '100%',
+        height: '100%',
     },
 
     boxEmoji: {
